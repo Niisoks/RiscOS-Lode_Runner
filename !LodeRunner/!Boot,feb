@@ -1,0 +1,4 @@
+Set <Loderunner$Dir>  <Obey$Dir>
+Set <Loderunner$Path> <Obey$Dir>.
+Iconsprites <Obey$Dir>.!Sprites
+
