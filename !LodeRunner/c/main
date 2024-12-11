@@ -6,6 +6,134 @@ static void main_initialise(void);
 static void main_poll(void);
 static void main_terminate(void);
 
+
+// A lot of the code here is heavily referenced / lifted from gavins work. Consider this a temporary library of sorts.
+wimp_window *window;
+wimp_block  *block;
+
+wimp_window* createWindow()
+{
+   wimp_window* window = (wimp_window*)malloc(sizeof(wimp_window));
+
+   window->visible.x0   = 0;
+   window->visible.y0   = 0;
+   window->visible.x1   = 640;
+   window->visible.y1   = 512;
+   window->xscroll      = 0;
+   window->yscroll      = 0;
+   window->next         = wimp_TOP;
+   window->flags        = wimp_WINDOW_MOVEABLE
+                        | wimp_WINDOW_BACK_ICON
+                        | wimp_WINDOW_CLOSE_ICON
+                        | wimp_WINDOW_TITLE_ICON
+                        | wimp_WINDOW_HSCROLL
+                        | wimp_WINDOW_VSCROLL
+                        | wimp_WINDOW_TOGGLE_ICON
+                        | wimp_WINDOW_SIZE_ICON
+                        | wimp_WINDOW_NEW_FORMAT;
+   window->title_fg     = wimp_COLOUR_BLACK;
+   window->title_bg     = wimp_COLOUR_LIGHT_GREY;
+   window->work_fg      = wimp_COLOUR_WHITE;
+   window->work_bg      = wimp_COLOUR_BLACK;
+   window->scroll_outer = wimp_COLOUR_MID_LIGHT_GREY;
+   window->scroll_inner = wimp_COLOUR_VERY_LIGHT_GREY;
+   window->extent.x0    = 0;
+   window->extent.y0    = 0;
+   window->extent.x1    = 640;
+   window->extent.y1    = 512;
+   window->title_flags  = wimp_ICON_TEXT
+                        | wimp_ICON_HCENTRED
+                        | wimp_ICON_VCENTRED;
+   window->work_flags   = wimp_BUTTON_CLICK << wimp_ICON_BUTTON_TYPE_SHIFT;
+   window->sprite_area  = 0;
+   window->xmin         = 0;
+   window->ymin         = 0;
+   window->icon_count   = 0;
+
+   strncpy(window->title_data.text, "Lode Runner", 12);
+
+   return window;
+}
+
+wimp_block* createWimpBlock(wimp_window* window)
+{
+   wimp_block* block = (wimp_block*)malloc(sizeof(wimp_block));
+
+   block->open.w       = wimp_create_window(window);
+   block->open.visible = window->visible;
+   block->open.xscroll = window->xscroll;
+   block->open.yscroll = window->yscroll;
+   block->open.next    = window->next;
+
+   return block;
+}
+
+void redrawWindow(wimp_block *block)
+{
+    wimp_draw draw;
+
+    draw.w = block->redraw.w;
+    draw.box = block->redraw.box;
+
+    int more;
+    xwimp_redraw_window(&draw, &more); 
+
+    while (more)
+    {
+        int x0 = draw.box.x0 - draw.xscroll + 100;
+        int y0 = draw.box.y0 - draw.yscroll - 100;
+        int x1 = draw.box.x1 - 300;
+        int y1 = draw.box.y1 - 300;
+
+        os_set_colour(os_COLOUR_SET_BG, os_COLOUR_WHITE);
+        os_plot(os_MOVE_TO, x0, y0);    
+        os_plot(os_PLOT_TO, x0, y1);    
+        os_plot(os_PLOT_TO, x1, y1);    
+        os_plot(os_PLOT_TO, x1, y0);    
+        os_plot(os_PLOT_TO, x0, y0);    
+
+        xwimp_get_rectangle(&draw, &more); 
+    }
+}
+
+
+osbool update(wimp_event_no event, wimp_block* block)
+{
+   switch(event)
+   {
+      case wimp_REDRAW_WINDOW_REQUEST:
+      {
+         redrawWindow(block);
+
+         break;
+      }
+      case wimp_OPEN_WINDOW_REQUEST:
+      {
+         wimp_open_window(&block->open);
+
+         break;
+      }
+      case wimp_CLOSE_WINDOW_REQUEST:
+      {
+         wimp_close_window(block->close.w);
+
+         return TRUE;
+      }
+      case wimp_USER_MESSAGE:
+      case wimp_USER_MESSAGE_RECORDED:
+      {
+         if(block->message.action == message_QUIT)
+         {
+            return TRUE;
+         }
+
+         break;
+      }
+   }
+
+   return FALSE;
+}
+
 int main(int argc, char *argv[])
 {
   main_initialise();
@@ -17,33 +145,38 @@ int main(int argc, char *argv[])
 
 static void main_initialise(void)
 {
-  wimp_initialise(wimp_VERSION_RO3, "Lode Runner", NULL, NULL);
+        wimp_initialise(wimp_VERSION_RO3, "Lode Runner", NULL, NULL);
+        window = createWindow();
+        block = createWimpBlock(window);
+
+        block->open.visible.x0 = 0;
+        block->open.visible.y0 = 0;
+        block->open.visible.x1 = 640;
+        block->open.visible.y1 = 512;
+
+        wimp_open_window(&block->open);
 
 }
 
 static void main_poll(void)
 {
-  wimp_block block;
   wimp_event_no reason;
 
   while(!main_quit_flag){
     reason = wimp_poll(
                 wimp_MASK_NULL | wimp_MASK_ENTERING | wimp_MASK_LEAVING |
-                wimp_MASK_GAIN | wimp_MASK_LOSE | wimp_MASK_POLLWORD, 
-                &block, 
+                wimp_MASK_GAIN | wimp_MASK_LOSE | wimp_MASK_POLLWORD,
+                block,
                 NULL
     );
-    switch (reason) {
-        case wimp_USER_MESSAGE:
-        case wimp_USER_MESSAGE_RECORDED:
-          if (block.message.action == message_QUIT)
-            main_quit_flag  = TRUE;
-          break;
-    }
+    main_quit_flag = update(reason, block);
   }
+  return 0;
 }
 
 static void main_terminate(void)
 {
-  wimp_close_down(0);
+        free(block);
+        free(window);
+        wimp_close_down(0);
 }
