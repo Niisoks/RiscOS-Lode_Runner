@@ -164,7 +164,6 @@ osspriteop_trans_tab *transTab;
 
 void updateGame(void *ws)
 {                                               
-        printf("WE KINDA DO UPDATE DOE")     ;
    GameState* state = (GameState*)ws;
     
    state->frame++;              
@@ -195,7 +194,7 @@ void updateGame(void *ws)
 //    state->x += state->dx;
 //    state->y += state->dy;
 
-   wimp_force_redraw(block->open.w, 0, 0, 1000, +1000); 
+   wimp_force_redraw(block->open.w, 0, 0, 640, +512); 
 
    setTimer(4, updateGame, ws);   
 }
@@ -349,7 +348,6 @@ osbool update(wimp_event_no event, wimp_block* block)
       case wimp_REDRAW_WINDOW_REQUEST:
       {
          redrawWindow(block);
-
          break;
       }
       case wimp_OPEN_WINDOW_REQUEST:
@@ -365,6 +363,9 @@ osbool update(wimp_event_no event, wimp_block* block)
          return TRUE;
       }
       case wimp_USER_MESSAGE:
+      {
+        break;
+      }
       case wimp_USER_MESSAGE_RECORDED:
       {
          if(block->message.action == message_QUIT)
@@ -403,26 +404,30 @@ static void main_initialise(void)
 
         
 
-        xwimp_open_window(&block->open);
+        
            initialiseTimer();
    initialiseGame(&state);
+   xwimp_open_window(&block->open);
 
 }
 
 static void main_poll(void)
 {
-  wimp_event_no reason;
+           osbool quit = FALSE;
 
-  while(!main_quit_flag){
-    updateTimer();
-    reason = wimp_poll(
-                wimp_MASK_NULL | wimp_MASK_ENTERING | wimp_MASK_LEAVING |
-                wimp_MASK_GAIN | wimp_MASK_LOSE | wimp_MASK_POLLWORD,
-                block,
-                NULL
-    );
-    main_quit_flag = update(reason, block);
-  }
+   while(!quit)
+   {
+      wimp_event_no event = wimp_poll(0, block, NULL);
+                     
+      if (event == wimp_NULL_REASON_CODE)
+      {
+         updateTimer();
+      }
+      else
+      {  
+         quit = update(event, block);
+      }
+   }
   return 0;
 }
 
