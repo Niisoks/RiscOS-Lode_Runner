@@ -80,8 +80,8 @@ void redrawWindow(wimp_block *block)
 
     while (more)
     {
-        int x0 = draw.box.x0 - draw.xscroll + 100;
-        int y0 = draw.box.y0 - draw.yscroll - 100;
+        int x0 = draw.box.x0 - 150;
+        int y0 = draw.box.y0 - 150;
         int x1 = draw.box.x1 - 300;
         int y1 = draw.box.y1 - 300;
 
