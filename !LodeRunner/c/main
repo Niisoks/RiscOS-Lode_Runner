@@ -1,3 +1,6 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "oslib/wimp.h"
 #include "oslib/os.h"        
@@ -40,11 +43,25 @@ void updateTimer()
       if (time >= timer)
       {
          timer = 0;
-
+         printf("Jobs done");
          timerCallback(timerWorkspace);
       }
    }
 }
+
+typedef struct 
+{                                       
+   osspriteop_header *sprite;
+
+   int x, y;   // coordinates of invader
+
+   int dx, dy;  // velocity of invader
+
+   int frame;
+}
+GameState;
+ 
+GameState state;
 
 
 // A lot of the code here is heavily referenced / lifted from gavins work. Consider this a temporary library of sorts.
@@ -57,8 +74,8 @@ wimp_window* createWindow()
 
    window->visible.x0   = 0;
    window->visible.y0   = 0;
-   window->visible.x1   = 640;
-   window->visible.y1   = 512;
+   window->visible.x1   = 1000;
+   window->visible.y1   = 1000;
    window->xscroll      = 0;
    window->yscroll      = 0;
    window->next         = wimp_TOP;
@@ -79,8 +96,8 @@ wimp_window* createWindow()
    window->scroll_inner = wimp_COLOUR_VERY_LIGHT_GREY;
    window->extent.x0    = 0;
    window->extent.y0    = 0;
-   window->extent.x1    = 640;
-   window->extent.y1    = 512;
+   window->extent.x1    = 1000;
+   window->extent.y1    = 1000;
    window->title_flags  = wimp_ICON_TEXT
                         | wimp_ICON_HCENTRED
                         | wimp_ICON_VCENTRED;
@@ -145,6 +162,56 @@ os_factors factors;
 
 osspriteop_trans_tab *transTab;
 
+void updateGame(void *ws)
+{                                               
+        printf("WE KINDA DO UPDATE DOE")     ;
+   GameState* state = (GameState*)ws;
+    
+   state->frame++;              
+
+   if (state->frame%4 == 0)
+   {
+      state->sprite = state->sprite == invader1 ? invader2 : invader1; 
+   }
+
+//    if ((state->x >> 8) >= 640 - 72)
+//    {
+//       state->dx = -(2 << 8);
+//    }                        
+//    else if ((state->x >> 8) < 0)
+//    {
+//       state->dx = +(2 << 8);
+//    }  
+
+//    if ((state->y >> 8) >= 512 - 68)
+//    {
+//       state->dy = -(2 << 8);
+//    }                        
+//    else if ((state->y >> 8) < 0)
+//    {
+//       state->dy = +(2 << 8);
+//    } 
+
+//    state->x += state->dx;
+//    state->y += state->dy;
+
+   wimp_force_redraw(block->open.w, 0, 0, 1000, +1000); 
+
+   setTimer(4, updateGame, ws);   
+}
+
+void initialiseGame(GameState *state)
+{
+   state->sprite = invader1;
+   state->x      = 320 << 8;
+   state->y      = 256 << 8;
+   state->dx     = 2 << 8;
+   state->dy     = 2 << 8;
+   state->frame  = 0;
+
+   setTimer(64, updateGame, (void*)state);
+}
+
 osspriteop_area* loadSpriteFile(const char *filename)
 {                                                       
    int size;
@@ -152,6 +219,8 @@ osspriteop_area* loadSpriteFile(const char *filename)
    bits type;
 
    fileswitch_object_type objType;
+
+   xosfile_read_stamped_no_path(filename, &objType, NULL, NULL, &size, NULL, &type);
    
    size += sizeof(int);
 
@@ -159,18 +228,28 @@ osspriteop_area* loadSpriteFile(const char *filename)
 
    area->size  = size;
    area->first = 16; // Size of the sprite?
+   
+   xosspriteop_load_sprite_file(osspriteop_USER_AREA, area, filename);
 
    // determine more efficient sprite pointer ids                                  
    os_error *e = xosspriteop_select_sprite(osspriteop_USER_AREA, 
                                      area, 
                                      (osspriteop_id)"runner1",
                                      &invader1);
+
+        if(e != NULL){
+                printf("Problem with sprite 1");
+                
+        }
     
    e = xosspriteop_select_sprite(osspriteop_USER_AREA, 
                                  area, 
                                  (osspriteop_id)"runner2",
                                  &invader2);
-                        
+
+        if(e != NULL){
+                printf("Problem with sprite 2");
+        }    
    // set up factors and translation table
 
    factors.xmul = 1<<(modeInfo.info.xEigFactor-1);
@@ -192,7 +271,7 @@ osspriteop_area* loadSpriteFile(const char *filename)
    transTab = malloc(size);
 
    e = xcolourtrans_generate_table_for_sprite(area, 
-                                    (osspriteop_id)"runner1",   
+                                    (osspriteop_id)"runner2",   
                                     (os_mode)-1,   
                                     (os_palette*)-1,   
                                     transTab,
@@ -235,15 +314,14 @@ void redrawWindow(wimp_block *block)
 
         os_error *e = xosspriteop_put_sprite_scaled(osspriteop_PTR,
                         area,
-                        (osspriteop_id)"runner1",
-                        x,
-                        y,
+                        (osspriteop_id)state.sprite,
+                        x + (state.x >> 8),
+                       y + (state.y >> 8),
                         os_ACTION_OVERWRITE |
                         osspriteop_GIVEN_WIDE_ENTRIES | 0x8,
                         &factors,
                         transTab);
         
-
         xwimp_get_rectangle(&draw, &more);
 
 //     while (more)
@@ -312,17 +390,22 @@ int main(int argc, char *argv[])
 
 static void main_initialise(void)
 {
-        wimp_initialise(wimp_VERSION_RO3, "Lode Runner", NULL, NULL);
-        area = loadSpriteFile("<OSLibGame$Dir>.sprites");
+        wimp_initialise(wimp_VERSION_RO3, "Loderunner", NULL, NULL);
+        updateModeInfo();
+        area = loadSpriteFile("<Loderunner$Dir>.sprites");
         window = createWindow();
         block = createWimpBlock(window);
 
         block->open.visible.x0 = 0;
         block->open.visible.y0 = 0;
-        block->open.visible.x1 = 640;
-        block->open.visible.y1 = 512;
+        block->open.visible.x1 = 1000;
+        block->open.visible.y1 = 1000;
 
-        wimp_open_window(&block->open);
+        
+
+        xwimp_open_window(&block->open);
+           initialiseTimer();
+   initialiseGame(&state);
 
 }
 
@@ -331,6 +414,7 @@ static void main_poll(void)
   wimp_event_no reason;
 
   while(!main_quit_flag){
+    updateTimer();
     reason = wimp_poll(
                 wimp_MASK_NULL | wimp_MASK_ENTERING | wimp_MASK_LEAVING |
                 wimp_MASK_GAIN | wimp_MASK_LOSE | wimp_MASK_POLLWORD,
