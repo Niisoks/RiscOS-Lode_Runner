@@ -1,29 +1,49 @@
 #include "oslib/wimp.h"
 
+static osbool main_quit_flag = FALSE;
+
+static void main_initialise(void);
+static void main_poll(void);
+static void main_terminate(void);
+
 int main(int argc, char *argv[])
 {
-        osbool          quit = FALSE;
-        wimp_block      block;
-        wimp_event_no   reason;
+  main_initialise();
+  main_poll();
+  main_terminate();
 
-        wimp_initialise(wimp_VERSION_RO3, "Lode Runner", NULL, NULL);
+  return 0;
+}
 
-        while (!quit) {
-                reason = wimp_poll(wimp_MASK_NULL | wimp_MASK_ENTERING |
-                        wimp_MASK_LEAVING | wimp_MASK_GAIN |
-                        wimp_MASK_LOSE | wimp_MASK_POLLWORD,
-                        &block, NULL);
+static void main_initialise(void)
+{
+  wimp_initialise(wimp_VERSION_RO3, "Lode Runner", NULL, NULL);
 
-                switch (reason) {
-                case wimp_USER_MESSAGE:
-                case wimp_USER_MESSAGE_RECORDED:
-                        if (block.message.action == message_QUIT)
-                                quit = TRUE;
-                        break;
-                }
-        }
+}
 
-        wimp_close_down(0);
+static void main_poll(void)
+{
+  wimp_block block;
+  wimp_event_no reason;
 
-        return 0;
+  while(!main_quit_flag){
+    reason = wimp_poll(
+                wimp_MASK_NULL | wimp_MASK_ENTERING | wimp_MASK_LEAVING |
+                wimp_MASK_GAIN | wimp_MASK_LOSE | wimp_MASK_POLLWORD, 
+                &block, 
+                NULL
+    );
+    switch (reason) {
+        case wimp_USER_MESSAGE:
+        case wimp_USER_MESSAGE_RECORDED:
+          if (block.message.action == message_QUIT)
+            main_quit_flag  = TRUE;
+          break;
+    }
+  }
+}
+
+static void main_terminate(void)
+{
+  wimp_close_down(0);
 }
