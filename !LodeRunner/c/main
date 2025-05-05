@@ -8,7 +8,7 @@
 #include "oslib/osspriteop.h"                    
 #include "oslib/colourtrans.h"
 
-static osbool main_quit_flag = FALSE;
+#include "main.h"
 
 static void main_initialise(void);
 static void main_poll(void);
@@ -43,30 +43,16 @@ void updateTimer()
       if (time >= timer)
       {
          timer = 0;
-         printf("Jobs done");
          timerCallback(timerWorkspace);
       }
    }
 }
 
-typedef struct 
-{                                       
-   osspriteop_header *sprite;
-
-   int x, y;   // coordinates of invader
-
-   int dx, dy;  // velocity of invader
-
-   int frame;
-}
-GameState;
- 
-GameState state;
-
 
 // A lot of the code here is heavily referenced / lifted from gavins work. Consider this a temporary library of sorts.
 wimp_window *window;
 wimp_block  *block;
+wimp_w      renderSpace;
 
 wimp_window* createWindow()
 {
@@ -162,55 +148,6 @@ os_factors factors;
 
 osspriteop_trans_tab *transTab;
 
-void updateGame(void *ws)
-{                                               
-   GameState* state = (GameState*)ws;
-    
-   state->frame++;              
-
-   if (state->frame%4 == 0)
-   {
-      state->sprite = state->sprite == invader1 ? invader2 : invader1; 
-   }
-
-//    if ((state->x >> 8) >= 640 - 72)
-//    {
-//       state->dx = -(2 << 8);
-//    }                        
-//    else if ((state->x >> 8) < 0)
-//    {
-//       state->dx = +(2 << 8);
-//    }  
-
-//    if ((state->y >> 8) >= 512 - 68)
-//    {
-//       state->dy = -(2 << 8);
-//    }                        
-//    else if ((state->y >> 8) < 0)
-//    {
-//       state->dy = +(2 << 8);
-//    } 
-
-//    state->x += state->dx;
-//    state->y += state->dy;
-
-   wimp_force_redraw(block->open.w, 0, 0, 640, +512); 
-
-   setTimer(4, updateGame, ws);   
-}
-
-void initialiseGame(GameState *state)
-{
-   state->sprite = invader1;
-   state->x      = 320 << 8;
-   state->y      = 256 << 8;
-   state->dx     = 2 << 8;
-   state->dy     = 2 << 8;
-   state->frame  = 0;
-
-   setTimer(64, updateGame, (void*)state);
-}
-
 osspriteop_area* loadSpriteFile(const char *filename)
 {                                                       
    int size;
@@ -284,6 +221,58 @@ osspriteop_area* loadSpriteFile(const char *filename)
    return area;
 }
 
+void updateGame(void *ws)
+{                                               
+   GameState* state = (GameState*)ws;
+    
+   state->frame++;              
+
+   if (state->frame%4 == 0)
+   {
+      state->sprite = state->sprite == invader1 ? invader2 : invader1; 
+   }
+
+   if ((state->x >> 8) >= 640 - 72)
+   {
+      state->dx = -(2 << 8); 
+   }                        
+   else if ((state->x >> 8) < 0)
+   {
+      state->dx = +(2 << 8);
+   }  
+
+   if ((state->y >> 8) >= 512 - 68)
+   {
+      state->dy = -(2 << 8);
+   }                        
+   else if ((state->y >> 8) < 0)
+   {
+      state->dy = +(2 << 8);
+   } 
+
+   state->x += state->dx;
+   state->y += state->dy;
+
+   // wimp_force_redraw(block->open.w, 0, 0, 640, +512); 
+   updateWindow(renderSpace);
+
+   setTimer(4, updateGame, ws);   
+}
+
+GameState state;
+
+void initialiseGame(GameState *state)
+{
+   state->sprite = invader1;
+   state->x      = 320 << 8;
+   state->y      = 256 << 8;
+   state->dx     = 2 << 8;
+   state->dy     = 2 << 8;
+   state->frame  = 0;
+
+   setTimer(64, updateGame, (void*)state);
+}
+
 wimp_block* createWimpBlock(wimp_window* window)
 {
    wimp_block* block = (wimp_block*)malloc(sizeof(wimp_block));
@@ -293,53 +282,60 @@ wimp_block* createWimpBlock(wimp_window* window)
    block->open.xscroll = window->xscroll;
    block->open.yscroll = window->yscroll;
    block->open.next    = window->next;
+   renderSpace         = block->open.w;
 
    return block;
 }
 
-void redrawWindow(wimp_block *block)
+void render(wimp_draw *draw, osbool more)
 {
-    wimp_draw draw;
-
-    draw.w = block->redraw.w;
-    draw.box = block->redraw.box;
-
-    int more;
-    xwimp_redraw_window(&draw, &more); 
-    while (more)
-    {
-        int x = draw.box.x0 - draw.xscroll;
-        int y = draw.box.y1 - draw.yscroll; 
+   while (more)
+   {
+      int x = draw->box.x0 - draw->xscroll;
+      int y = draw->box.y1 - draw->yscroll; 
 
         os_error *e = xosspriteop_put_sprite_scaled(osspriteop_PTR,
                         area,
                         (osspriteop_id)state.sprite,
                         x + (state.x >> 8),
-                       y + (state.y >> 8),
+                        y + (state.y >> 8),
                         os_ACTION_OVERWRITE |
-                        osspriteop_GIVEN_WIDE_ENTRIES | 0x8,
+                        osspriteop_GIVEN_WIDE_ENTRIES | osspriteop_USE_MASK,
                         &factors,
                         transTab);
         
-        xwimp_get_rectangle(&draw, &more);
-
-//     while (more)
-//     {
-//         int x0 = draw.box.x0 - 150;
-//         int y0 = draw.box.y0 - 150;
-//         int x1 = draw.box.x1 - 300;
-//         int y1 = draw.box.y1 - 300;
-
-//         os_set_colour(os_COLOUR_SET_BG, os_COLOUR_WHITE);
-//         os_plot(os_MOVE_TO, x0, y0);    
-//         os_plot(os_PLOT_TO, x0, y1);    
-//         os_plot(os_PLOT_TO, x1, y1);    
-//         os_plot(os_PLOT_TO, x1, y0);    
-//         os_plot(os_PLOT_TO, x0, y0);    
-
-//         xwimp_get_rectangle(&draw, &more); 
+        xwimp_get_rectangle(draw, &more);
     }
 }
+
+void updateWindow(wimp_w window)
+{
+   wimp_draw draw;     
+
+   // only update window where invader appears
+   
+   draw.w      = window;
+   draw.box.x0 = (state.x >> 8);
+   draw.box.y0 = (state.y >> 8);
+   draw.box.x1 = draw.box.x0 + (38 << 1);
+   draw.box.y1 = draw.box.y0 + (19 << 2);
+            
+   int more;
+
+   xwimp_update_window(&draw, &more);
+
+   render(&draw, more);
+}
+
+void redrawWindow(wimp_block *block)
+{
+   int more;
+
+   xwimp_redraw_window(&block->redraw, &more);
+
+   render(&block->redraw, more);
+}
+
 
 osbool update(wimp_event_no event, wimp_block* block)
 {
@@ -380,7 +376,7 @@ osbool update(wimp_event_no event, wimp_block* block)
    return FALSE;
 }
 
-int main(int argc, char *argv[])
+int main()
 {
   main_initialise();
   main_poll();
@@ -428,7 +424,7 @@ static void main_poll(void)
          quit = update(event, block);
       }
    }
-  return 0;
+  return;
 }
 
 static void main_terminate(void)
