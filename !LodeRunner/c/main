@@ -6,55 +6,20 @@
 
 char map[HEIGHT][WIDTH + 1] = {
     "####################",
-    "#         H        #",
+    "#   G    H   G     #",
     "#  H###H###H#####  #",
     "#  H#  H  #H       #",
     "#  H# #H# #H  ######",
     "#  H# #H# #H    G  #",
     "# #H# #H# #####H#  #",
-    "#  H   H#  G   H   #",
+    "#  H   H#---G  H   #",
     "#  H   H     H######",
-    "#  H   H     H#    #",
-    "#  H   H           #",
+    "#  H   H-----H#    #",
+    "#  H --H           #",
     "#  H   H    ##H    #",
     "#  H   H      H    #",
     "####################",
 };
-
-typedef enum {
-    NEUTRAL,
-    LEFT,
-    RIGHT,
-    UP,
-    DOWN
-} Direction;
-
-typedef struct {
-    int tileX, tileY;      
-    float visualX, visualY; 
-    float targetX, targetY; 
-    int isMoving;          
-    Direction moveDir;     
-} Entity;
-
-typedef struct {
-    Entity player;          
-    Entity enemies[MAX_ENEMIES]; 
-    int enemyCount;         
-    int goldTotal;          
-    int goldCollected;      
-    int frame;              
-    int gameOver;           
-    float pixelSpeed;       
-    int enemyUpdateCooldown; 
-} GameState;
-
-GameState gameState;  
-
-int playerIsFalling = 0;
-
-int keyState[4] = {0};      
-int keyPressedThisFrame[4] = {0};
 
 typedef union {
     int numbers[14];
@@ -120,6 +85,36 @@ osspriteop_area* loadSpriteFile(const char *filename) {
     e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"wall", &wallSprite);
     e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"ladder", &ladderSprite);
     e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"gold", &goldSprite);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"hole", &holeSprite);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"tightrope", &tightropeSprite);
+
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runner3", &playerSprite3);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runner4", &playerSprite4);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runnerclimb1", &playerClimbSprite1);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runnerclimb2", &playerClimbSprite2);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runnerclimb3", &playerClimbSprite3);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runnerclimb4", &playerClimbSprite4);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runnerdig1", &playerDigSprite1);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runnerdig2", &playerDigSprite2);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runnerfall1", &playerFallSprite1);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runnerfall2", &playerFallSprite2);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runnerrope1", &playerRopeSprite1);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runnerrope2", &playerRopeSprite2);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runnerrope3", &playerRopeSprite3);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runnerrope4", &playerRopeSprite4);
+
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemy3", &enemySprite3);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemy4", &enemySprite4);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemyclimb1", &enemyClimbSprite1);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemyclimb2", &enemyClimbSprite2);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemyclimb3", &enemyClimbSprite3);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemyclimb4", &enemyClimbSprite4);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemyfall1", &enemyFallSprite1);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemyfall2", &enemyFallSprite2);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemyrope1", &enemyRopeSprite1);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemyrope2", &enemyRopeSprite2);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemyrope3", &enemyRopeSprite3);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemyrope4", &enemyRopeSprite4);
 
     factors.xmul = (1<<(modeInfo.info.xEigFactor-1)) * GAME_SIZE;
     factors.ymul = 1<<(modeInfo.info.yEigFactor) * GAME_SIZE;
@@ -127,6 +122,229 @@ osspriteop_area* loadSpriteFile(const char *filename) {
     factors.ydiv = 2;         
 
     return area;
+}
+
+void initialiseAnimStates() {
+
+    playerAnim.walkFrame = 0;
+    playerAnim.climbFrame = 0;
+    playerAnim.ropeFrame = 0;
+    playerAnim.fallFrame = 0;
+    playerAnim.lastWalkFrame = 0;
+    playerAnim.lastClimbFrame = 0;
+    playerAnim.lastRopeFrame = 0;
+
+    for (int i = 0; i < 5; i++) {
+        enemyAnims[i].walkFrame = 0;
+        enemyAnims[i].climbFrame = 0;
+        enemyAnims[i].ropeFrame = 0;
+        enemyAnims[i].fallFrame = 0;
+        enemyAnims[i].lastWalkFrame = 0;
+        enemyAnims[i].lastClimbFrame = 0;
+        enemyAnims[i].lastRopeFrame = 0;
+    }
+}
+
+void updateAnimationFrames(GameState *state) {
+
+    Entity *player = &state->player;
+
+    if (player->isMoving) {
+
+        if ((player->moveDir == LEFT || player->moveDir == RIGHT) && !isOnTightrope(player->tileX, player->tileY)) {
+
+            playerAnim.walkFrame = (playerAnim.walkFrame + 1) % 4;
+            playerAnim.lastWalkFrame = playerAnim.walkFrame;
+        }
+        else if ((player->moveDir == LEFT || player->moveDir == RIGHT) && isOnTightrope(player->tileX, player->tileY)) {
+
+            playerAnim.ropeFrame = (playerAnim.ropeFrame + 1) % 4;
+            playerAnim.lastRopeFrame = playerAnim.ropeFrame;
+        }
+        else if ((player->moveDir == UP || player->moveDir == DOWN) && isClimbable(player->tileX, player->tileY)) {
+
+            playerAnim.climbFrame = (playerAnim.climbFrame + 1) % 4;
+            playerAnim.lastClimbFrame = playerAnim.climbFrame;
+        }
+    }
+
+    if (playerIsFalling) {
+        playerAnim.fallFrame = (playerAnim.fallFrame + 1) % 2;
+    }
+
+    for (int i = 0; i < state->enemyCount; i++) {
+        Entity *enemy = &state->enemies[i];
+
+        if (enemy->isMoving) {
+            if ((enemy->moveDir == LEFT || enemy->moveDir == RIGHT) && !isOnTightrope(enemy->tileX, enemy->tileY)) {
+
+                enemyAnims[i].walkFrame = (enemyAnims[i].walkFrame + 1) % 4;
+                enemyAnims[i].lastWalkFrame = enemyAnims[i].walkFrame;
+            }
+            else if ((enemy->moveDir == LEFT || enemy->moveDir == RIGHT) && isOnTightrope(enemy->tileX, enemy->tileY)) {
+
+                enemyAnims[i].ropeFrame = (enemyAnims[i].ropeFrame + 1) % 4;
+                enemyAnims[i].lastRopeFrame = enemyAnims[i].ropeFrame;
+            }
+            else if ((enemy->moveDir == UP || enemy->moveDir == DOWN) && isClimbable(enemy->tileX, enemy->tileY)) {
+
+                enemyAnims[i].climbFrame = (enemyAnims[i].climbFrame + 1) % 4;
+                enemyAnims[i].lastClimbFrame = enemyAnims[i].climbFrame;
+            }
+
+            if (enemy->moveDir == DOWN && !isClimbable(enemy->tileX, enemy->tileY) && !isOnTightrope(enemy->tileX, enemy->tileY)) {
+                enemyAnims[i].fallFrame = (enemyAnims[i].fallFrame + 1) % 2;
+            }
+        }
+    }
+}
+
+osspriteop_header* getEntitySprite(Entity *entity, GameState *state, int isPlayer, int entityIndex) {
+    AnimationState *anim;
+
+    if (isPlayer) {
+        anim = &playerAnim;
+    } else {
+        anim = &enemyAnims[entityIndex];
+    }
+
+    if (entity->inHole) {
+
+        return isPlayer ? playerFallSprite2 : enemyFallSprite2;
+    }
+
+    if (isPlayer && entity->isDigging) {
+        return (state->frame % 4 < 2) ? playerDigSprite1 : playerDigSprite2;
+    }
+
+    if ((isPlayer && playerIsFalling) || 
+        (!isPlayer && entity->moveDir == DOWN && !isClimbable(entity->tileX, entity->tileY) && !isOnTightrope(entity->tileX, entity->tileY))) {
+        if (isPlayer) {
+            return (anim->fallFrame == 0) ? playerFallSprite1 : playerFallSprite2;
+        } else {
+            return (anim->fallFrame == 0) ? enemyFallSprite1 : enemyFallSprite2;
+        }
+    }
+
+    if (isOnTightrope(entity->tileX, entity->tileY)) {
+        if (entity->isMoving && (entity->moveDir == LEFT || entity->moveDir == RIGHT)) {
+
+            if (isPlayer) {
+                switch (anim->ropeFrame) {
+                    case 0: return playerRopeSprite1;
+                    case 1: return playerRopeSprite2;
+                    case 2: return playerRopeSprite3;
+                    case 3: return playerRopeSprite4;
+                }
+            } else {
+                switch (anim->ropeFrame) {
+                    case 0: return enemyRopeSprite1;
+                    case 1: return enemyRopeSprite2;
+                    case 2: return enemyRopeSprite3;
+                    case 3: return enemyRopeSprite4;
+                }
+            }
+        } else {
+
+            if (isPlayer) {
+                switch (anim->lastRopeFrame) {
+                    case 0: return playerRopeSprite1;
+                    case 1: return playerRopeSprite2;
+                    case 2: return playerRopeSprite3;
+                    case 3: return playerRopeSprite4;
+                    default: return playerRopeSprite1;
+                }
+            } else {
+                switch (anim->lastRopeFrame) {
+                    case 0: return enemyRopeSprite1;
+                    case 1: return enemyRopeSprite2;
+                    case 2: return enemyRopeSprite3;
+                    case 3: return enemyRopeSprite4;
+                    default: return enemyRopeSprite1;
+                }
+            }
+        }
+    }
+
+    if (isClimbable(entity->tileX, entity->tileY)) {
+        if (entity->isMoving && (entity->moveDir == UP || entity->moveDir == DOWN)) {
+
+            if (isPlayer) {
+                switch (anim->climbFrame) {
+                    case 0: return playerClimbSprite1;
+                    case 1: return playerClimbSprite2;
+                    case 2: return playerClimbSprite3;
+                    case 3: return playerClimbSprite4;
+                }
+            } else {
+                switch (anim->climbFrame) {
+                    case 0: return enemyClimbSprite1;
+                    case 1: return enemyClimbSprite2;
+                    case 2: return enemyClimbSprite3;
+                    case 3: return enemyClimbSprite4;
+                }
+            }
+        } else {
+
+            if (isPlayer) {
+                switch (anim->lastClimbFrame) {
+                    case 0: return playerClimbSprite1;
+                    case 1: return playerClimbSprite2;
+                    case 2: return playerClimbSprite3;
+                    case 3: return playerClimbSprite4;
+                    default: return playerClimbSprite1;
+                }
+            } else {
+                switch (anim->lastClimbFrame) {
+                    case 0: return enemyClimbSprite1;
+                    case 1: return enemyClimbSprite2;
+                    case 2: return enemyClimbSprite3;
+                    case 3: return enemyClimbSprite4;
+                    default: return enemyClimbSprite1;
+                }
+            }
+        }
+    }
+
+    if (entity->isMoving && (entity->moveDir == LEFT || entity->moveDir == RIGHT)) {
+
+        if (isPlayer) {
+            switch (anim->walkFrame) {
+                case 0: return playerSprite1;
+                case 1: return playerSprite2;
+                case 2: return playerSprite3;
+                case 3: return playerSprite4;
+            }
+        } else {
+            switch (anim->walkFrame) {
+                case 0: return enemySprite1;
+                case 1: return enemySprite2;
+                case 2: return enemySprite3;
+                case 3: return enemySprite4;
+            }
+        }
+    } else {
+
+        if (isPlayer) {
+            switch (anim->lastWalkFrame) {
+                case 0: return playerSprite1;
+                case 1: return playerSprite2;
+                case 2: return playerSprite3;
+                case 3: return playerSprite4;
+                default: return playerSprite1;
+            }
+        } else {
+            switch (anim->lastWalkFrame) {
+                case 0: return enemySprite1;
+                case 1: return enemySprite2;
+                case 2: return enemySprite3;
+                case 3: return enemySprite4;
+                default: return enemySprite1;
+            }
+        }
+    }
+
+    return isPlayer ? playerSprite1 : enemySprite1;
 }
 
 wimp_window* createWindow() {
@@ -210,6 +428,8 @@ void render(wimp_draw *draw, osbool more) {
                     case '#': sprite = wallSprite; break;
                     case 'H': sprite = ladderSprite; break;
                     case 'G': sprite = goldSprite; break;
+                    case '.': sprite = holeSprite; break;
+                    case '-': sprite = tightropeSprite; break;
                 }
 
                 if (sprite != NULL) {
@@ -225,21 +445,25 @@ void render(wimp_draw *draw, osbool more) {
 
         int playerScreenX = baseX + (int)(state->player.visualX * TILE_SIZE);
         int playerScreenY = baseY - (int)(state->player.visualY * TILE_SIZE);
+        osspriteop_header *playerSprite = getEntitySprite(&state->player, state, 1, 0); 
 
-        xosspriteop_put_sprite_scaled(
-            osspriteop_PTR, spriteArea, (osspriteop_id)playerSprite1,
-            playerScreenX, playerScreenY,
-            os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES | osspriteop_USE_MASK,
-            &factors, transTab
-        );
+        if (playerSprite != NULL) {
+            xosspriteop_put_sprite_scaled(
+                osspriteop_PTR, spriteArea, (osspriteop_id)playerSprite,
+                playerScreenX, playerScreenY,
+                os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES | osspriteop_USE_MASK,
+                &factors, transTab
+            );
+        }
 
         for (i = 0; i < state->enemyCount; i++) {
             Entity *enemy = &state->enemies[i];
             int enemyScreenX = baseX + (int)(enemy->visualX * TILE_SIZE);
             int enemyScreenY = baseY - (int)(enemy->visualY * TILE_SIZE);
+            osspriteop_header *enemySprite = getEntitySprite(enemy, state, 0, i);
 
             xosspriteop_put_sprite_scaled(
-                osspriteop_PTR, spriteArea, (osspriteop_id)enemySprite1,
+                osspriteop_PTR, spriteArea, (osspriteop_id)enemySprite,
                 enemyScreenX, enemyScreenY,
                 os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES | osspriteop_USE_MASK,
                 &factors, transTab
@@ -277,12 +501,82 @@ void countGold(GameState *state) {
     }
 }
 
-int isWalkable(int x, int y) {
+void initialiseGame(GameState *state) {
+
+    state->player.tileX = 6;
+    state->player.tileY = 7;
+    state->player.visualX = 6.0f;
+    state->player.visualY = 7.0f;
+    state->player.targetX = state->player.visualX;
+    state->player.targetY = state->player.visualY;
+    state->player.isMoving = 0;
+    state->player.moveDir = NEUTRAL;
+    state->player.inHole = 0;
+    state->player.isDigging = 0;  
+    state->player.digDirection = 0;
+    state->player.digTimer = 0;
+
+    state->enemyCount = 1;
+    state->enemies[0].tileX = 15;
+    state->enemies[0].tileY = 7;
+    state->enemies[0].visualX = 15.0f;
+    state->enemies[0].visualY = 7.0f;
+    state->enemies[0].targetX = state->enemies[0].visualX;
+    state->enemies[0].targetY = state->enemies[0].visualY;
+    state->enemies[0].isMoving = 0;
+    state->enemies[0].moveDir = NEUTRAL;
+    state->enemies[0].inHole = 0;
+    state->enemies[0].isDigging = 0;  
+    state->enemies[0].digDirection = 0;
+    state->enemies[0].digTimer = 0;
+
+    initialiseAnimStates();
+
+    state->goldCollected = 0;
+    countGold(state);
+    state->frame = 0;
+    state->gameOver = 0;
+    state->pixelSpeed = 0.15f;
+    state->enemyUpdateCooldown = 0;
+
+    for (int y = 0; y < HEIGHT; y++) {
+        for (int x = 0; x < WIDTH; x++) {
+            holeTimer[y][x] = 0;
+            dug[y][x] = 0;
+        }
+    }
+
+    setTimer(4, updateGame, (void*)state);
+}
+
+int isTightrope(int x, int y) {
+    if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT)
+        return 0;
+
+    return (map[y][x] == '-');
+}
+
+int isWalkable(int x, int y, GameState *state) {
     if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT)
         return 0;
 
     char tile = map[y][x];
-    return (tile == ' ' || tile == 'G' || tile == 'H');
+
+    if (tile == '.' && dug[y][x]) {
+
+        for (int i = 0; i < state->enemyCount; i++) {
+            Entity *enemy = &state->enemies[i];
+            if (enemy->tileX == x && enemy->tileY == y && enemy->inHole) {
+                return 1;  
+            }
+        }
+    }
+
+    return (tile == ' ' || tile == 'G' || tile == 'H' || tile == '.' || tile == '-');
+}
+
+int isOnTightrope(int x, int y) {
+    return (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT && map[y][x] == '-');
 }
 
 int isClimbable(int x, int y) {
@@ -303,23 +597,69 @@ int isLadderTop(int x, int y) {
     return y + 1 < HEIGHT && map[y + 1][x] == 'H' && map[y][x] != 'H' && map[y][x] != '#';
 }
 
-int supports(int x, int y) {
+int supports(int x, int y, GameState *state) {
     if (y + 1 >= HEIGHT) return 1;  
+
+    if (y + 1 < HEIGHT && map[y + 1][x] == '.' && dug[y + 1][x]) {
+        for (int i = 0; i < state->enemyCount; i++) {
+            Entity *enemy = &state->enemies[i];
+            if (enemy->tileX == x && enemy->tileY == y + 1 && enemy->inHole) {
+                return 1;  
+            }
+        }
+    }
 
     return isSolid(x, y + 1) || isLadderTop(x, y) || isClimbable(x, y);
 }
 
+int isInHole(int x, int y) {
+    return x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT && 
+           map[y][x] == '.' && holeTimer[y][x] > 0;
+}
+
+int findSafePosition(int x, int y, int *newX, int *newY) {
+
+    int dx[] = {0, -1, 1, 0, -1, -1, 1, 1};
+    int dy[] = {-1, 0, 0, 1, -1, 1, -1, 1};
+
+    for (int i = 0; i < 8; i++) {
+        *newX = x + dx[i];
+        *newY = y + dy[i];
+
+        if (*newX >= 0 && *newX < WIDTH && *newY >= 0 && *newY < HEIGHT && 
+            isWalkable(*newX, *newY, &gameState) && !isSolid(*newX, *newY) && !isInHole(*newX, *newY)) {
+            return 1;
+        }
+    }
+
+    if (y - 1 >= 0 && isWalkable(x, y - 1, &gameState) && !isSolid(x, y - 1) && !isInHole(x, y - 1)) {
+        *newX = x;
+        *newY = y - 1;
+        return 1;
+    }
+
+    return 0;
+}
+
 void moveEntity(GameState *state, Entity *entity, Direction dir, int isPlayer) {
 
-    if (!entity->isMoving || entity->moveDir != dir) {
+    if (entity->inHole) return;
 
-        if (isPlayer) {
+    if (isPlayer) {
 
-            if (playerIsFalling && (dir == LEFT || dir == RIGHT)) {
-                return;
-            }
+        if (playerIsFalling && (dir == LEFT || dir == RIGHT) && !isOnTightrope(entity->tileX, entity->tileY)) {
+            return;
         }
 
+        if (entity->isMoving && entity->moveDir == DOWN && 
+            !isClimbable(entity->tileX, entity->tileY) && 
+            !isOnTightrope(entity->tileX, entity->tileY) &&
+            (dir == LEFT || dir == RIGHT)) {
+            return;
+        }
+    }
+
+    if (!entity->isMoving || entity->moveDir != dir) {
         int tileX = entity->tileX;
         int tileY = entity->tileY;
 
@@ -327,7 +667,25 @@ void moveEntity(GameState *state, Entity *entity, Direction dir, int isPlayer) {
 
             int nextX = tileX + (dir == LEFT ? -1 : 1);
 
-            if (isWalkable(nextX, tileY)) {
+            if (isWalkable(nextX, tileY, state)) {
+
+                if (isTightrope(tileX, tileY)) {
+
+                    entity->targetX = (float)nextX;
+                    entity->targetY = (float)tileY;
+                    entity->isMoving = 1;
+                    entity->moveDir = dir;
+                    return;
+                }
+
+                if (isClimbable(tileX, tileY) && isTightrope(nextX, tileY)) {
+                    entity->targetX = (float)nextX;
+                    entity->targetY = (float)tileY;
+                    entity->isMoving = 1;
+                    entity->moveDir = dir;
+                    return;
+                }
+
                 entity->targetX = (float)nextX;
                 entity->targetY = (float)tileY;
                 entity->isMoving = 1;
@@ -355,7 +713,7 @@ void moveEntity(GameState *state, Entity *entity, Direction dir, int isPlayer) {
 
             if (isClimbable(tileX, tileY)) {
 
-                if (tileY > 0 && (isClimbable(tileX, tileY-1) || isWalkable(tileX, tileY-1))) {
+                if (tileY > 0 && (isClimbable(tileX, tileY-1) || isWalkable(tileX, tileY-1, state))) {
                     entity->targetX = (float)tileX;
                     entity->targetY = (float)(tileY - 1);
                     entity->isMoving = 1;
@@ -372,8 +730,17 @@ void moveEntity(GameState *state, Entity *entity, Direction dir, int isPlayer) {
         }
         else if (dir == DOWN) {
 
-            if (isClimbable(tileX, tileY) || 
-                (tileY < HEIGHT-1 && isClimbable(tileX, tileY+1) && supports(tileX, tileY))) {
+            if (isOnTightrope(tileX, tileY)) {
+                if (tileY < HEIGHT-1 && isWalkable(tileX, tileY+1, state)) {
+                    entity->targetX = (float)tileX;
+                    entity->targetY = (float)(tileY + 1);
+                    entity->isMoving = 1;
+                    entity->moveDir = dir;
+                }
+            }
+
+            else if (isClimbable(tileX, tileY) || 
+                (tileY < HEIGHT-1 && isClimbable(tileX, tileY+1) && supports(tileX, tileY, state))) {
 
                 if (tileY < HEIGHT-1 && 
                     (isClimbable(tileX, tileY+1) || isLadderTop(tileX, tileY))) {
@@ -464,6 +831,23 @@ void updateMovementAnimation(GameState *state) {
     }
 }
 
+int isEnemyInHoleAt(GameState *state, int x, int y) {
+
+    if (!(x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT && 
+          map[y][x] == '.' && dug[y][x])) {
+        return 0;
+    }
+
+    for (int i = 0; i < state->enemyCount; i++) {
+        Entity *enemy = &state->enemies[i];
+        if (enemy->tileX == x && enemy->tileY == y && enemy->inHole) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 void applyGravity(GameState *state) {
     Entity *player = &state->player;
 
@@ -471,10 +855,12 @@ void applyGravity(GameState *state) {
         playerIsFalling = 0;
     }
 
-    if (!player->isMoving && !supports(player->tileX, player->tileY) && 
+    if (!player->isMoving && !isInHole(player->tileX, player->tileY) && 
+        !supports(player->tileX, player->tileY, state) && 
+        !isOnTightrope(player->tileX, player->tileY) && 
         !isClimbable(player->tileX, player->tileY)) {
 
-        if (player->tileY + 1 < HEIGHT && isWalkable(player->tileX, player->tileY + 1)) {
+        if (player->tileY + 1 < HEIGHT && isWalkable(player->tileX, player->tileY + 1, state)) {
             player->targetX = (float)player->tileX;
             player->targetY = (float)(player->tileY + 1);
             player->isMoving = 1;
@@ -485,10 +871,12 @@ void applyGravity(GameState *state) {
 
     for (int i = 0; i < state->enemyCount; i++) {
         Entity *enemy = &state->enemies[i];
-        if (!enemy->isMoving && !supports(enemy->tileX, enemy->tileY) && 
+        if (!enemy->isMoving && !isInHole(enemy->tileX, enemy->tileY) && 
+            !supports(enemy->tileX, enemy->tileY, state) && 
+            !isOnTightrope(enemy->tileX, enemy->tileY) && 
             !isClimbable(enemy->tileX, enemy->tileY)) {
 
-            if (enemy->tileY + 1 < HEIGHT && isWalkable(enemy->tileX, enemy->tileY + 1)) {
+            if (enemy->tileY + 1 < HEIGHT && isWalkable(enemy->tileX, enemy->tileY + 1, state)) {
                 enemy->targetX = (float)enemy->tileX;
                 enemy->targetY = (float)(enemy->tileY + 1);
                 enemy->isMoving = 1;
@@ -505,6 +893,198 @@ void checkForGold(GameState *state) {
        state->goldCollected++;
    }
 }
+
+void updateEnemies(GameState *state) {
+    if (++state->enemyUpdateCooldown < 12) return;
+    state->enemyUpdateCooldown = 0;
+
+    for (int i = 0; i < state->enemyCount; i++) {
+        Entity *enemy = &state->enemies[i];
+        if (enemy->isMoving || enemy->inHole) continue;
+
+        int enemyX = enemy->tileX;
+        int enemyY = enemy->tileY;
+        int playerX = state->player.tileX;
+        int playerY = state->player.tileY;
+
+        int dx = playerX - enemyX;
+        int dy = playerY - enemyY;
+
+        Direction dir = NEUTRAL;
+
+        if (isOnTightrope(enemyX, enemyY)) {
+
+            if (dy > 2 && abs(dx) > 1) {
+                dir = DOWN;
+            }
+
+            else if (dx != 0) {
+                dir = dx < 0 ? LEFT : RIGHT;
+            }
+
+            else if (isWalkable(enemyX - 1, enemyY, state)) {
+                dir = LEFT;
+            } 
+            else if (isWalkable(enemyX + 1, enemyY, state)) {
+                dir = RIGHT;
+            }
+        }
+
+        else {
+
+            if (abs(dy) > abs(dx)) {
+                if (dy < 0 && isClimbable(enemyX, enemyY)) {
+                    dir = UP;
+                } 
+                else if (dy > 0) {
+
+                    if (isClimbable(enemyX, enemyY)) {
+                        dir = DOWN;
+                    }
+
+                    else {
+                        dir = dx < 0 ? LEFT : RIGHT;
+                    }
+                }
+            } 
+
+            else if (dx != 0) {
+
+                if ((dx < 0 && isOnTightrope(enemyX - 1, enemyY)) || 
+                    (dx > 0 && isOnTightrope(enemyX + 1, enemyY))) {
+                    dir = dx < 0 ? LEFT : RIGHT;
+                }
+
+                else {
+                    dir = dx < 0 ? LEFT : RIGHT;
+                }
+            }
+        }
+
+        if (dir != NEUTRAL) {
+            moveEntity(state, enemy, dir, 0);  
+        }
+    }
+}
+
+int checkCollision(GameState *state) {
+    Entity *player = &state->player;
+
+    for (int i = 0; i < state->enemyCount; i++) {
+        Entity *enemy = &state->enemies[i];
+
+        if (enemy->tileX == player->tileX && enemy->tileY == player->tileY && !enemy->inHole) {
+            return 1;
+        }
+    }
+
+    return 0;
+ }
+
+void dig(GameState *state, int dx) {
+    Entity *player = &state->player;
+    int x = player->tileX + dx;
+    int y = player->tileY + 1;
+
+    if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT && map[y][x] == '#') {
+        map[y][x] = '.';
+        holeTimer[y][x] = os_read_monotonic_time();
+        dug[y][x] = 1;
+
+        player->isDigging = 1;
+        player->digDirection = dx;
+        player->digTimer = 20; 
+    }
+}
+
+void updateHoleTimers(GameState *state) {
+    os_t currentTime = os_read_monotonic_time();
+
+    for (int y = 0; y < HEIGHT; y++) {
+        for (int x = 0; x < WIDTH; x++) {
+            if (map[y][x] == '.' && dug[y][x]) {
+                int occupied = 0;
+
+                if (state->player.tileX == x && state->player.tileY == y) {
+                    state->player.inHole = 1;
+                    occupied = 1;
+                }
+
+                for (int i = 0; i < state->enemyCount; i++) {
+                    Entity *enemy = &state->enemies[i];
+                    if (enemy->tileX == x && enemy->tileY == y) {
+                        enemy->inHole = 1;
+                        occupied = 1;
+                    }
+                }
+
+                if (holeTimer[y][x] != 0 && 
+                    (currentTime - holeTimer[y][x]) >= HOLE_REGENERATION_TIME) {
+
+                    if (state->player.inHole && state->player.tileX == x && state->player.tileY == y) {
+                        int newX, newY;
+                        if (findSafePosition(x, y, &newX, &newY)) {
+
+                            state->player.visualX = newX;
+                            state->player.visualY = newY;
+
+                            state->player.targetX = newX;
+                            state->player.targetY = newY;
+                            updateLogicalPosition(&state->player);
+                            state->player.inHole = 0;
+                            state->player.isMoving = 1; 
+                            state->player.moveDir = UP; 
+                        } else {
+
+                            holeTimer[y][x] = currentTime;
+                            continue;
+                        }
+                    }
+
+                    for (int i = 0; i < state->enemyCount; i++) {
+                        Entity *enemy = &state->enemies[i];
+                        if (enemy->inHole && enemy->tileX == x && enemy->tileY == y) {
+                            int newX, newY;
+                            if (findSafePosition(x, y, &newX, &newY)) {
+
+                                enemy->visualX = newX;
+                                enemy->visualY = newY;
+
+                                enemy->targetX = newX;
+                                enemy->targetY = newY;
+                                updateLogicalPosition(enemy);
+                                enemy->inHole = 0;
+                                enemy->isMoving = 1; 
+                                enemy->moveDir = UP; 
+                            } else {
+
+                                holeTimer[y][x] = currentTime;
+                                continue;
+                            }
+                        }
+                    }
+
+                    map[y][x] = '#';
+                    holeTimer[y][x] = 0;
+                    dug[y][x] = 0;
+                }
+            }
+        }
+    }
+
+    if (map[state->player.tileY][state->player.tileX] != '.' || 
+        !dug[state->player.tileY][state->player.tileX]) {
+        state->player.inHole = 0;
+    }
+
+    for (int i = 0; i < state->enemyCount; i++) {
+        Entity *enemy = &state->enemies[i];
+        if (map[enemy->tileY][enemy->tileX] != '.' || 
+            !dug[enemy->tileY][enemy->tileX]) {
+            enemy->inHole = 0;
+        }
+    }
+ }
 
 void processKeyPress(int keyCode, GameState *state) {
     switch (keyCode) {
@@ -523,6 +1103,14 @@ void processKeyPress(int keyCode, GameState *state) {
         case wimp_KEY_DOWN:
             keyPressedThisFrame[3] = 1;
             moveEntity(state, &state->player, DOWN, 1);
+            break;
+        case 'z':
+        case 'Z':
+            dig(state, -1);
+            break;
+        case 'x':
+        case 'X':
+            dig(state, 1);
             break;
     }
 }
@@ -561,13 +1149,23 @@ void updateGame(void *ws) {
 
     state->frame++;
 
+    if (state->player.isDigging) {
+        state->player.digTimer--;
+        if (state->player.digTimer <= 0) {
+            state->player.isDigging = 0;
+        }
+    }
+
     updateMovementAnimation(state);
+    updateAnimationFrames(state); 
     if (!state->player.isMoving) {
         applyGravity(state);
     }
+    updateEnemies(state);
+    updateHoleTimers(state);
     checkForGold(state);
 
-    char statusText[32];
+    char statusText[48];
     sprintf(statusText, "Gold: %d/%d", state->goldCollected, state->goldTotal);
 
     wimp_window_info window_info;
@@ -575,40 +1173,14 @@ void updateGame(void *ws) {
     xwimp_get_window_info_header_only(&window_info);
     strncpy(window_info.title_data.text, statusText, 31);
 
+    if (checkCollision(state)) {
+        state->gameOver = 1;
+        strncpy(window_info.title_data.text, "Game Over!", 12);
+    }
+
     updateWindow(gameWindow);
 
     setTimer(4, updateGame, ws);
-}
-
-void initialiseGame(GameState *state) {
-
-    state->player.tileX = 5;
-    state->player.tileY = 1;
-    state->player.visualX = 5.0f;
-    state->player.visualY = 1.0f;
-    state->player.targetX = state->player.visualX;
-    state->player.targetY = state->player.visualY;
-    state->player.isMoving = 0;
-    state->player.moveDir = NEUTRAL;
-
-    state->enemyCount = 1;
-    state->enemies[0].tileX = 15;
-    state->enemies[0].tileY = 7;
-    state->enemies[0].visualX = 15.0f;
-    state->enemies[0].visualY = 7.0f;
-    state->enemies[0].targetX = state->enemies[0].visualX;
-    state->enemies[0].targetY = state->enemies[0].visualY;
-    state->enemies[0].isMoving = 0;
-    state->enemies[0].moveDir = NEUTRAL;
-
-    state->goldCollected = 0;
-    countGold(state);
-    state->frame = 0;
-    state->gameOver = 0;
-    state->pixelSpeed = 0.15f;
-    state->enemyUpdateCooldown = 0;
-
-    setTimer(4, updateGame, (void*)state);
 }
 
 osbool update(wimp_event_no event, wimp_block* block) {
