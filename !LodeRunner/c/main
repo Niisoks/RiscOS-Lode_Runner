@@ -51,6 +51,9 @@ typedef struct {
 
 GameState gameState;  
 
+int keyState[4] = {0};      
+int keyPressedThisFrame[4] = {0};
+
 typedef union {
     int numbers[14];
     struct {
@@ -272,6 +275,243 @@ void countGold(GameState *state) {
     }
 }
 
+int isWalkable(int x, int y) {
+    if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT)
+        return 0;
+
+    char tile = map[y][x];
+    return (tile == ' ' || tile == 'G' || tile == 'H');
+}
+
+int isClimbable(int x, int y) {
+    if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT)
+        return 0;
+
+    return (map[y][x] == 'H');
+}
+
+int isSolid(int x, int y) {
+    if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT)
+        return 0;
+
+    return (map[y][x] == '#' || map[y][x] == 'G');
+}
+
+int isLadderTop(int x, int y) {
+    return y + 1 < HEIGHT && map[y + 1][x] == 'H' && map[y][x] != 'H' && map[y][x] != '#';
+}
+
+int supports(int x, int y) {
+    if (y + 1 >= HEIGHT) return 1;  
+
+    return isSolid(x, y + 1) || isLadderTop(x, y) || isClimbable(x, y);
+}
+
+void moveEntity(GameState *state, Entity *entity, Direction dir) {
+
+    if (!entity->isMoving || entity->moveDir != dir) {
+        int tileX = entity->tileX;
+        int tileY = entity->tileY;
+
+        if (dir == LEFT || dir == RIGHT) {
+
+            int nextX = tileX + (dir == LEFT ? -1 : 1);
+
+            if (isWalkable(nextX, tileY)) {
+                entity->targetX = (float)nextX;
+                entity->targetY = (float)tileY;
+                entity->isMoving = 1;
+                entity->moveDir = dir;
+            }
+
+            else if (isSolid(nextX, tileY)) {
+                float partialX;
+
+                if (dir == LEFT) {
+
+                    partialX = (float)tileX - WALL_PADDING;
+                } else { 
+
+                    partialX = (float)tileX + WALL_PADDING;
+                }
+
+                entity->targetX = partialX;
+                entity->targetY = (float)tileY;
+                entity->isMoving = 1;
+                entity->moveDir = dir;
+            }
+        } 
+        else if (dir == UP) {
+
+            if (isClimbable(tileX, tileY)) {
+
+                if (tileY > 0 && (isClimbable(tileX, tileY-1) || isWalkable(tileX, tileY-1))) {
+                    entity->targetX = (float)tileX;
+                    entity->targetY = (float)(tileY - 1);
+                    entity->isMoving = 1;
+                    entity->moveDir = dir;
+                }
+
+                else if (tileY > 0 && isSolid(tileX, tileY-1)) {
+                    entity->targetX = (float)tileX;
+                    entity->targetY = (float)tileY - WALL_PADDING;
+                    entity->isMoving = 1;
+                    entity->moveDir = dir;
+                }
+            }
+        }
+        else if (dir == DOWN) {
+
+            if (isClimbable(tileX, tileY) || 
+                (tileY < HEIGHT-1 && isClimbable(tileX, tileY+1) && supports(tileX, tileY))) {
+
+                if (tileY < HEIGHT-1 && 
+                    (isClimbable(tileX, tileY+1) || isLadderTop(tileX, tileY))) {
+                    entity->targetX = (float)tileX;
+                    entity->targetY = (float)(tileY + 1);
+                    entity->isMoving = 1;
+                    entity->moveDir = dir;
+                }
+
+                else if (tileY < HEIGHT-1 && isSolid(tileX, tileY+1)) {
+                    entity->targetX = (float)tileX;
+                    entity->targetY = (float)tileY + WALL_PADDING;
+                    entity->isMoving = 1;
+                    entity->moveDir = dir;
+                }
+            }
+        }
+    }
+}
+
+void updateLogicalPosition(Entity *entity) {
+    entity->tileX = (int)round(entity->visualX);
+    entity->tileY = (int)round(entity->visualY);
+}
+
+void updateMovementAnimation(GameState *state) {
+
+    Entity *player = &state->player;
+    if (player->isMoving) {
+        float dx = player->targetX - player->visualX;
+        float dy = player->targetY - player->visualY;
+        float length = sqrt(dx * dx + dy * dy);
+
+        if (length > 0) {
+            dx /= length;
+            dy /= length;
+        }
+
+        player->visualX += dx * state->pixelSpeed;
+        player->visualY += dy * state->pixelSpeed;
+
+        float distToTarget = sqrt(
+            pow(player->targetX - player->visualX, 2) + 
+            pow(player->targetY - player->visualY, 2)
+        );
+
+        if (distToTarget < state->pixelSpeed) {
+            player->visualX = player->targetX;
+            player->visualY = player->targetY;
+            player->isMoving = 0;
+        }
+
+        updateLogicalPosition(player);
+    }
+
+    for (int i = 0; i < state->enemyCount; i++) {
+        Entity *enemy = &state->enemies[i];
+        if (enemy->isMoving) {
+            float dx = enemy->targetX - enemy->visualX;
+            float dy = enemy->targetY - enemy->visualY;
+            float length = sqrt(dx * dx + dy * dy);
+
+            if (length > 0) {
+                dx /= length;
+                dy /= length;
+            }
+
+            enemy->visualX += dx * state->pixelSpeed;
+            enemy->visualY += dy * state->pixelSpeed;
+
+            float distToTarget = sqrt(
+                pow(enemy->targetX - enemy->visualX, 2) + 
+                pow(enemy->targetY - enemy->visualY, 2)
+            );
+
+            if (distToTarget < state->pixelSpeed) {
+                enemy->visualX = enemy->targetX;
+                enemy->visualY = enemy->targetY;
+                enemy->isMoving = 0;
+            }
+
+            updateLogicalPosition(enemy);
+        }
+    }
+}
+
+void processKeyPress(int keyCode, GameState *state) {
+    switch (keyCode) {
+        case wimp_KEY_LEFT:
+            keyPressedThisFrame[0] = 1;
+            moveEntity(state, &state->player, LEFT);
+            break;
+        case wimp_KEY_RIGHT:
+            keyPressedThisFrame[1] = 1;
+            moveEntity(state, &state->player, RIGHT);
+            break;
+        case wimp_KEY_UP:
+            keyPressedThisFrame[2] = 1;
+            moveEntity(state, &state->player, UP);
+            break;
+        case wimp_KEY_DOWN:
+            keyPressedThisFrame[3] = 1;
+            moveEntity(state, &state->player, DOWN);
+            break;
+    }
+}
+
+void trackKeyStates(GameState *state) {
+    Entity *player = &state->player;
+
+    if (keyState[0] && !keyPressedThisFrame[0]) {
+        if (player->isMoving && player->moveDir == LEFT) {
+            player->targetX = player->visualX; 
+            player->isMoving = 0;
+        }
+    }
+
+    if (keyState[1] && !keyPressedThisFrame[1]) {
+        if (player->isMoving && player->moveDir == RIGHT) {
+            player->targetX = player->visualX; 
+            player->isMoving = 0;
+        }
+    }
+
+    for (int i = 0; i < 4; i++) {
+        keyState[i] = keyPressedThisFrame[i];
+        keyPressedThisFrame[i] = 0;
+    }
+}
+
+void updateGame(void *ws) {
+    GameState *state = (GameState *)ws;
+
+    if (state->gameOver) {
+        return;
+    }
+
+    trackKeyStates(state);
+
+    state->frame++;
+
+    updateMovementAnimation(state);
+
+    updateWindow(gameWindow);
+
+    setTimer(4, updateGame, ws);
+}
+
 void initialiseGame(GameState *state) {
 
     state->player.tileX = 5;
@@ -299,12 +539,14 @@ void initialiseGame(GameState *state) {
     state->gameOver = 0;
     state->pixelSpeed = 0.15f;
     state->enemyUpdateCooldown = 0;
+
+    setTimer(4, updateGame, (void*)state);
 }
 
 osbool update(wimp_event_no event, wimp_block* block) {
     switch(event) {
         case wimp_KEY_PRESSED:
-
+            processKeyPress(block->key.c, &gameState);
             break;
         case wimp_REDRAW_WINDOW_REQUEST:
             redrawWindow(block);
