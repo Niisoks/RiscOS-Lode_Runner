@@ -8,6 +8,7 @@ RM = delete
 
 application: $(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $^ $(LIBS)
+	SetType $@ Absolute
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
