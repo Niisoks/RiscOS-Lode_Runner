@@ -51,6 +51,8 @@ typedef struct {
 
 GameState gameState;  
 
+int playerIsFalling = 0;
+
 int keyState[4] = {0};      
 int keyPressedThisFrame[4] = {0};
 
@@ -307,9 +309,17 @@ int supports(int x, int y) {
     return isSolid(x, y + 1) || isLadderTop(x, y) || isClimbable(x, y);
 }
 
-void moveEntity(GameState *state, Entity *entity, Direction dir) {
+void moveEntity(GameState *state, Entity *entity, Direction dir, int isPlayer) {
 
     if (!entity->isMoving || entity->moveDir != dir) {
+
+        if (isPlayer) {
+
+            if (playerIsFalling && (dir == LEFT || dir == RIGHT)) {
+                return;
+            }
+        }
+
         int tileX = entity->tileX;
         int tileY = entity->tileY;
 
@@ -324,7 +334,7 @@ void moveEntity(GameState *state, Entity *entity, Direction dir) {
                 entity->moveDir = dir;
             }
 
-            else if (isSolid(nextX, tileY)) {
+            else if (isPlayer && isSolid(nextX, tileY)) {
                 float partialX;
 
                 if (dir == LEFT) {
@@ -352,7 +362,7 @@ void moveEntity(GameState *state, Entity *entity, Direction dir) {
                     entity->moveDir = dir;
                 }
 
-                else if (tileY > 0 && isSolid(tileX, tileY-1)) {
+                else if (isPlayer && tileY > 0 && isSolid(tileX, tileY-1)) {
                     entity->targetX = (float)tileX;
                     entity->targetY = (float)tileY - WALL_PADDING;
                     entity->isMoving = 1;
@@ -373,7 +383,7 @@ void moveEntity(GameState *state, Entity *entity, Direction dir) {
                     entity->moveDir = dir;
                 }
 
-                else if (tileY < HEIGHT-1 && isSolid(tileX, tileY+1)) {
+                else if (isPlayer && tileY < HEIGHT-1 && isSolid(tileX, tileY+1)) {
                     entity->targetX = (float)tileX;
                     entity->targetY = (float)tileY + WALL_PADDING;
                     entity->isMoving = 1;
@@ -414,6 +424,10 @@ void updateMovementAnimation(GameState *state) {
             player->visualX = player->targetX;
             player->visualY = player->targetY;
             player->isMoving = 0;
+
+            if (playerIsFalling && player->moveDir == DOWN) {
+                playerIsFalling = 0;
+            }
         }
 
         updateLogicalPosition(player);
@@ -450,23 +464,65 @@ void updateMovementAnimation(GameState *state) {
     }
 }
 
+void applyGravity(GameState *state) {
+    Entity *player = &state->player;
+
+    if (!player->isMoving || player->moveDir != DOWN) {
+        playerIsFalling = 0;
+    }
+
+    if (!player->isMoving && !supports(player->tileX, player->tileY) && 
+        !isClimbable(player->tileX, player->tileY)) {
+
+        if (player->tileY + 1 < HEIGHT && isWalkable(player->tileX, player->tileY + 1)) {
+            player->targetX = (float)player->tileX;
+            player->targetY = (float)(player->tileY + 1);
+            player->isMoving = 1;
+            player->moveDir = DOWN;
+            playerIsFalling = 1;
+        }
+    }
+
+    for (int i = 0; i < state->enemyCount; i++) {
+        Entity *enemy = &state->enemies[i];
+        if (!enemy->isMoving && !supports(enemy->tileX, enemy->tileY) && 
+            !isClimbable(enemy->tileX, enemy->tileY)) {
+
+            if (enemy->tileY + 1 < HEIGHT && isWalkable(enemy->tileX, enemy->tileY + 1)) {
+                enemy->targetX = (float)enemy->tileX;
+                enemy->targetY = (float)(enemy->tileY + 1);
+                enemy->isMoving = 1;
+                enemy->moveDir = DOWN;
+            }
+        }
+    }
+}
+
+void checkForGold(GameState *state) {
+   Entity *player = &state->player;
+   if (map[player->tileY][player->tileX] == 'G') {
+       map[player->tileY][player->tileX] = ' ';
+       state->goldCollected++;
+   }
+}
+
 void processKeyPress(int keyCode, GameState *state) {
     switch (keyCode) {
         case wimp_KEY_LEFT:
             keyPressedThisFrame[0] = 1;
-            moveEntity(state, &state->player, LEFT);
+            moveEntity(state, &state->player, LEFT, 1);
             break;
         case wimp_KEY_RIGHT:
             keyPressedThisFrame[1] = 1;
-            moveEntity(state, &state->player, RIGHT);
+            moveEntity(state, &state->player, RIGHT, 1);
             break;
         case wimp_KEY_UP:
             keyPressedThisFrame[2] = 1;
-            moveEntity(state, &state->player, UP);
+            moveEntity(state, &state->player, UP, 1);
             break;
         case wimp_KEY_DOWN:
             keyPressedThisFrame[3] = 1;
-            moveEntity(state, &state->player, DOWN);
+            moveEntity(state, &state->player, DOWN, 1);
             break;
     }
 }
@@ -506,6 +562,18 @@ void updateGame(void *ws) {
     state->frame++;
 
     updateMovementAnimation(state);
+    if (!state->player.isMoving) {
+        applyGravity(state);
+    }
+    checkForGold(state);
+
+    char statusText[32];
+    sprintf(statusText, "Gold: %d/%d", state->goldCollected, state->goldTotal);
+
+    wimp_window_info window_info;
+    window_info.w = gameWindow;
+    xwimp_get_window_info_header_only(&window_info);
+    strncpy(window_info.title_data.text, statusText, 31);
 
     updateWindow(gameWindow);
 
