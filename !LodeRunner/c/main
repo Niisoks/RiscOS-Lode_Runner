@@ -21,6 +21,36 @@ char map[HEIGHT][WIDTH + 1] = {
     "####################",
 };
 
+typedef enum {
+    NEUTRAL,
+    LEFT,
+    RIGHT,
+    UP,
+    DOWN
+} Direction;
+
+typedef struct {
+    int tileX, tileY;      
+    float visualX, visualY; 
+    float targetX, targetY; 
+    int isMoving;          
+    Direction moveDir;     
+} Entity;
+
+typedef struct {
+    Entity player;          
+    Entity enemies[MAX_ENEMIES]; 
+    int enemyCount;         
+    int goldTotal;          
+    int goldCollected;      
+    int frame;              
+    int gameOver;           
+    float pixelSpeed;       
+    int enemyUpdateCooldown; 
+} GameState;
+
+GameState gameState;  
+
 typedef union {
     int numbers[14];
     struct {
@@ -157,7 +187,8 @@ void redrawWindow(wimp_block *block) {
 }
 
 void render(wimp_draw *draw, osbool more) {
-    int x, y;
+    int x, y, i;
+    GameState *state = &gameState;
 
     while (more) {
 
@@ -187,6 +218,29 @@ void render(wimp_draw *draw, osbool more) {
             }
         }
 
+        int playerScreenX = baseX + (int)(state->player.visualX * TILE_SIZE);
+        int playerScreenY = baseY - (int)(state->player.visualY * TILE_SIZE);
+
+        xosspriteop_put_sprite_scaled(
+            osspriteop_PTR, spriteArea, (osspriteop_id)playerSprite1,
+            playerScreenX, playerScreenY,
+            os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES | osspriteop_USE_MASK,
+            &factors, transTab
+        );
+
+        for (i = 0; i < state->enemyCount; i++) {
+            Entity *enemy = &state->enemies[i];
+            int enemyScreenX = baseX + (int)(enemy->visualX * TILE_SIZE);
+            int enemyScreenY = baseY - (int)(enemy->visualY * TILE_SIZE);
+
+            xosspriteop_put_sprite_scaled(
+                osspriteop_PTR, spriteArea, (osspriteop_id)enemySprite1,
+                enemyScreenX, enemyScreenY,
+                os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES | osspriteop_USE_MASK,
+                &factors, transTab
+            );
+        }
+
         xwimp_get_rectangle(draw, &more);
     }
 }
@@ -203,6 +257,48 @@ void updateWindow(wimp_w window) {
 
     xwimp_update_window(&draw, &more);
     render(&draw, more);
+}
+
+void countGold(GameState *state) {
+    int x, y;
+
+    state->goldTotal = 0;
+    for (y = 0; y < HEIGHT; y++) {
+        for (x = 0; x < WIDTH; x++) {
+            if (map[y][x] == 'G') {
+                state->goldTotal++;
+            }
+        }
+    }
+}
+
+void initialiseGame(GameState *state) {
+
+    state->player.tileX = 5;
+    state->player.tileY = 1;
+    state->player.visualX = 5.0f;
+    state->player.visualY = 1.0f;
+    state->player.targetX = state->player.visualX;
+    state->player.targetY = state->player.visualY;
+    state->player.isMoving = 0;
+    state->player.moveDir = NEUTRAL;
+
+    state->enemyCount = 1;
+    state->enemies[0].tileX = 15;
+    state->enemies[0].tileY = 7;
+    state->enemies[0].visualX = 15.0f;
+    state->enemies[0].visualY = 7.0f;
+    state->enemies[0].targetX = state->enemies[0].visualX;
+    state->enemies[0].targetY = state->enemies[0].visualY;
+    state->enemies[0].isMoving = 0;
+    state->enemies[0].moveDir = NEUTRAL;
+
+    state->goldCollected = 0;
+    countGold(state);
+    state->frame = 0;
+    state->gameOver = 0;
+    state->pixelSpeed = 0.15f;
+    state->enemyUpdateCooldown = 0;
 }
 
 osbool update(wimp_event_no event, wimp_block* block) {
@@ -241,6 +337,7 @@ int main() {
    block = createWimpBlock(window);
 
    initialiseTimer();
+   initialiseGame(&gameState);
 
    xwimp_open_window(&block->open);
 
