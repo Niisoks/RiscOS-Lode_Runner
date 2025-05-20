@@ -27,5 +27,6 @@ void processKeyPress(int keyCode, GameState *state);
 void trackKeyStates(GameState *state);
 void updateGame(void *ws);
 void countGold(GameState *state);
+int loadMapFromFile(const char *filename);
 
 #endif

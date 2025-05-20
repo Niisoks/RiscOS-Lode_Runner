@@ -3,22 +3,54 @@
 #include "render.h"
 #include "wimp.h"
 
-char map[HEIGHT][WIDTH + 1] = {
-    "####################",
-    "#   G    H   G     #",
-    "#  H###H###H#####  #",
-    "#  H#  H  #H       #",
-    "#  H# #H# #H  ######",
-    "#  H# #H# #H    G  #",
-    "# #H# #H# #####H#  #",
-    "#  H   H#---G  H   #",
-    "#  H   H     H######",
-    "#  H   H-----H#    #",
-    "#  H --H           #",
-    "#  H   H    ##H    #",
-    "#  H   H      H    #",
-    "####################",
-};
+char map[HEIGHT][WIDTH + 1];
+
+int loadMapFromFile(const char *filename) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        return 0;
+    }
+    
+    // First clear the entire map
+    for (int y = 0; y < HEIGHT; y++) {
+        for (int x = 0; x < WIDTH; x++) {
+            map[y][x] = ' ';
+        }
+        map[y][WIDTH] = '\0';
+    }
+    
+    // Now read the file line by line
+    char buffer[256];
+    int y = 0;
+    
+    while (y < HEIGHT && fgets(buffer, sizeof(buffer), file)) {
+        // Trim newline characters
+        char *newline = strchr(buffer, '\n');
+        if (newline) *newline = '\0';
+        newline = strchr(buffer, '\r');
+        if (newline) *newline = '\0';
+        
+        int len = strlen(buffer);
+        int x;
+        
+        // Copy characters to map, but only up to WIDTH
+        for (x = 0; x < WIDTH && x < len; x++) {
+            map[y][x] = buffer[x];
+        }
+        
+        y++;
+    }
+    
+    fclose(file);
+    
+    // Print the loaded map to debug
+    printf("Loaded map (%d rows):\n", y);
+    for (int i = 0; i < HEIGHT; i++) {
+        printf("[%s]\n", map[i]);
+    }
+    
+    return 1;
+}
 
 
 GameState gameState;
@@ -225,6 +257,33 @@ int main(void) {
 
    updateModeInfo();
    spriteArea = loadSpriteFile("<LodeRunner$Dir>.sprites");
+   
+   // Load map from file, or use default map if file not found
+   if (!loadMapFromFile("<LodeRunner$Dir>.maps.level1")) {
+       // If file loading fails, initialize a default map directly
+       const char* defaultMap[] = {
+           "####################",
+           "#   G    H   G     #",
+           "#  H###H###H#####  #",
+           "#  H#  H  #H       #",
+           "#  H# #H# #H  ######",
+           "#  H# #H# #H    G  #",
+           "# #H# #H# #####H#  #",
+           "#  H   H#---G  H   #",
+           "#  H   H     H######",
+           "#  H   H-----H#    #",
+           "#  H --H           #",
+           "#  H   H    ##H    #",
+           "#  H   H      H    #",
+           "GGGGGGGGGGGGGGGGGGGG"
+       };
+       
+       for (int y = 0; y < HEIGHT && y < 14; y++) {
+           strncpy(map[y], defaultMap[y], WIDTH);
+           map[y][WIDTH] = '\0';
+       }
+   }
+   
    window = createWindow();
    createWimpBlock(window);
 
