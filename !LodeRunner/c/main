@@ -4,6 +4,8 @@
 #include "wimp.h"
 
 char map[HEIGHT][WIDTH + 1];
+int currentLevel = 1;
+
 
 int loadMapFromFile(const char *filename) {
     FILE *file = fopen(filename, "r");
@@ -146,6 +148,15 @@ void initialiseGame(GameState *state) {
 }
 
 void processKeyPress(int keyCode, GameState *state) {
+    // Handle number keys for level switching
+    if (keyCode >= '1' && keyCode <= '9') {
+        int level = keyCode - '0';
+        if (level != currentLevel) {
+            loadLevel(level);
+            return;
+        }
+    }
+    
     switch (keyCode) {
         case wimp_KEY_LEFT:
             keyPressedThisFrame[0] = 1;
@@ -235,7 +246,7 @@ void updateGame(void *ws) {
     checkForGold(state);
 
     char statusText[48];
-    sprintf(statusText, "Gold: %d/%d", state->goldCollected, state->goldTotal);
+    sprintf(statusText, "Level: %d  Gold: %d/%d", currentLevel, state->goldCollected, state->goldTotal);
 
     wimp_window_info window_info;
     window_info.w = gameWindow;
@@ -244,12 +255,55 @@ void updateGame(void *ws) {
 
     if (checkCollision(state)) {
         state->gameOver = 1;
-        strncpy(window_info.title_data.text, "Game Over!", 12);
+        strncpy(window_info.title_data.text, "Game Over! Press any number key to restart", 42);
+    }
+    
+    // Check if all gold is collected
+    if (state->goldCollected >= state->goldTotal) {
+        // Display success message
+        sprintf(window_info.title_data.text, "Level %d Complete! Press a number for next level", currentLevel);
     }
 
     updateWindow(gameWindow);
 
     setTimer(4, updateGame, ws);
+}
+
+void loadLevel(int level) {
+    char filename[256];
+    currentLevel = level;
+    
+    // Create the filename based on the level number
+    sprintf(filename, "<LodeRunner$Dir>.maps.level%d", level);
+    
+    // Attempt to load the map
+    if (!loadMapFromFile(filename)) {
+        // If file doesn't exist, create a default map
+        const char* defaultMap[] = {
+            "####################",
+            "#   G    H   G     #",
+            "#  H###H###H#####  #",
+            "#  H#  H  #H       #",
+            "#  H# #H# #H  ######",
+            "#  H# #H# #H    G  #",
+            "# #H# #H# #####H#  #",
+            "#  H   H#---G  H   #",
+            "#  H   H     H######",
+            "#  H   H-----H#    #",
+            "#  H --H           #",
+            "#  H   H    ##H    #",
+            "#  H   H      H    #",
+            "GGGGGGGGGGGGGGGGGGGG"
+        };
+        
+        for (int y = 0; y < HEIGHT && y < 14; y++) {
+            strncpy(map[y], defaultMap[y], WIDTH);
+            map[y][WIDTH] = '\0';
+        }
+    }
+    
+    // Reinitialize the game state with the new map
+    initialiseGame(&gameState);
 }
 
 int main(void) {
@@ -258,31 +312,8 @@ int main(void) {
    updateModeInfo();
    spriteArea = loadSpriteFile("<LodeRunner$Dir>.sprites");
    
-   // Load map from file, or use default map if file not found
-   if (!loadMapFromFile("<LodeRunner$Dir>.maps.level1")) {
-       // If file loading fails, initialize a default map directly
-       const char* defaultMap[] = {
-           "####################",
-           "#   G    H   G     #",
-           "#  H###H###H#####  #",
-           "#  H#  H  #H       #",
-           "#  H# #H# #H  ######",
-           "#  H# #H# #H    G  #",
-           "# #H# #H# #####H#  #",
-           "#  H   H#---G  H   #",
-           "#  H   H     H######",
-           "#  H   H-----H#    #",
-           "#  H --H           #",
-           "#  H   H    ##H    #",
-           "#  H   H      H    #",
-           "GGGGGGGGGGGGGGGGGGGG"
-       };
-       
-       for (int y = 0; y < HEIGHT && y < 14; y++) {
-           strncpy(map[y], defaultMap[y], WIDTH);
-           map[y][WIDTH] = '\0';
-       }
-   }
+   // Load the first level
+   loadLevel(1);
    
    window = createWindow();
    createWimpBlock(window);

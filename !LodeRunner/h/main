@@ -14,6 +14,7 @@
 
 extern int keyState[4];
 extern int keyPressedThisFrame[4];
+extern int currentLevel;
 
 extern os_t timer;
 extern void (*timerCallback)(void*);
@@ -28,5 +29,6 @@ void trackKeyStates(GameState *state);
 void updateGame(void *ws);
 void countGold(GameState *state);
 int loadMapFromFile(const char *filename);
+void loadLevel(int level);
 
 #endif
