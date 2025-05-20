@@ -33,10 +33,44 @@ void render(wimp_draw *draw, osbool more) {
                 }
             }
         }
+        
+        // Draw black square at player's previous position if moved
+        Entity *player = &state->player;
+        if (player->hasMoved) {
+            int prevScreenX = baseX + (int)(player->prevVisualX * TILE_SIZE);
+            int prevScreenY = baseY - (int)(player->prevVisualY * TILE_SIZE);
+            
+            xosspriteop_put_sprite_scaled(
+                osspriteop_PTR, spriteArea, (osspriteop_id)blackSquareSprite,
+                prevScreenX, prevScreenY,
+                os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES | osspriteop_USE_MASK,
+                &factors, transTab
+            );
+            
+            player->hasMoved = 0;
+        }
+        
+        // Draw black squares at enemies' previous positions
+        for (i = 0; i < state->enemyCount; i++) {
+            Entity *enemy = &state->enemies[i];
+            if (enemy->hasMoved) {
+                int prevScreenX = baseX + (int)(enemy->prevVisualX * TILE_SIZE);
+                int prevScreenY = baseY - (int)(enemy->prevVisualY * TILE_SIZE);
+                
+                xosspriteop_put_sprite_scaled(
+                    osspriteop_PTR, spriteArea, (osspriteop_id)blackSquareSprite,
+                    prevScreenX, prevScreenY,
+                    os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES | osspriteop_USE_MASK,
+                    &factors, transTab
+                );
+                
+                enemy->hasMoved = 0;
+            }
+        }
 
-        int playerScreenX = baseX + (int)(state->player.visualX * TILE_SIZE);
-        int playerScreenY = baseY - (int)(state->player.visualY * TILE_SIZE);
-        osspriteop_header *playerSprite = getEntitySprite(&state->player, state, 1, 0); 
+        int playerScreenX = baseX + (int)(player->visualX * TILE_SIZE);
+        int playerScreenY = baseY - (int)(player->visualY * TILE_SIZE);
+        osspriteop_header *playerSprite = getEntitySprite(player, state, 1, 0); 
 
         if (playerSprite != NULL) {
             xosspriteop_put_sprite_scaled(

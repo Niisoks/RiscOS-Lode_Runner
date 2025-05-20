@@ -13,7 +13,6 @@ int loadMapFromFile(const char *filename) {
         return 0;
     }
     
-    // First clear the entire map
     for (int y = 0; y < HEIGHT; y++) {
         for (int x = 0; x < WIDTH; x++) {
             map[y][x] = ' ';
@@ -21,12 +20,10 @@ int loadMapFromFile(const char *filename) {
         map[y][WIDTH] = '\0';
     }
     
-    // Now read the file line by line
     char buffer[256];
     int y = 0;
     
     while (y < HEIGHT && fgets(buffer, sizeof(buffer), file)) {
-        // Trim newline characters
         char *newline = strchr(buffer, '\n');
         if (newline) *newline = '\0';
         newline = strchr(buffer, '\r');
@@ -35,7 +32,6 @@ int loadMapFromFile(const char *filename) {
         int len = strlen(buffer);
         int x;
         
-        // Copy characters to map, but only up to WIDTH
         for (x = 0; x < WIDTH && x < len; x++) {
             map[y][x] = buffer[x];
         }
@@ -44,12 +40,6 @@ int loadMapFromFile(const char *filename) {
     }
     
     fclose(file);
-    
-    // Print the loaded map to debug
-    printf("Loaded map (%d rows):\n", y);
-    for (int i = 0; i < HEIGHT; i++) {
-        printf("[%s]\n", map[i]);
-    }
     
     return 1;
 }
@@ -113,6 +103,9 @@ void initialiseGame(GameState *state) {
     state->player.isDigging = 0;  
     state->player.digDirection = 0;
     state->player.digTimer = 0;
+    state->player.prevVisualX = state->player.visualX;
+    state->player.prevVisualY = state->player.visualY;
+    state->player.hasMoved = 0;
 
     state->enemyCount = 1;
     state->enemies[0].tileX = 15;
@@ -127,6 +120,11 @@ void initialiseGame(GameState *state) {
     state->enemies[0].isDigging = 0;  
     state->enemies[0].digDirection = 0;
     state->enemies[0].digTimer = 0;
+    for (int i = 0; i < state->enemyCount; i++) {
+        state->enemies[i].prevVisualX = state->enemies[i].visualX;
+        state->enemies[i].prevVisualY = state->enemies[i].visualY;
+        state->enemies[i].hasMoved = 0;
+    }
 
     initialiseAnimStates();
 
@@ -148,7 +146,6 @@ void initialiseGame(GameState *state) {
 }
 
 void processKeyPress(int keyCode, GameState *state) {
-    // Handle number keys for level switching
     if (keyCode >= '1' && keyCode <= '9') {
         int level = keyCode - '0';
         if (level != currentLevel) {
@@ -235,7 +232,6 @@ void updateGame(void *ws) {
             }
         }
     }
-
     updateMovementAnimation(state);
     updateAnimationFrames(state); 
     if (!state->player.isMoving) {
@@ -258,9 +254,7 @@ void updateGame(void *ws) {
         strncpy(window_info.title_data.text, "Game Over! Press any number key to restart", 42);
     }
     
-    // Check if all gold is collected
     if (state->goldCollected >= state->goldTotal) {
-        // Display success message
         sprintf(window_info.title_data.text, "Level %d Complete! Press a number for next level", currentLevel);
     }
 
@@ -273,12 +267,9 @@ void loadLevel(int level) {
     char filename[256];
     currentLevel = level;
     
-    // Create the filename based on the level number
     sprintf(filename, "<LodeRunner$Dir>.maps.level%d", level);
     
-    // Attempt to load the map
     if (!loadMapFromFile(filename)) {
-        // If file doesn't exist, create a default map
         const char* defaultMap[] = {
             "####################",
             "#   G    H   G     #",
@@ -302,41 +293,39 @@ void loadLevel(int level) {
         }
     }
     
-    // Reinitialize the game state with the new map
     initialiseGame(&gameState);
 }
 
 int main(void) {
-   wimp_initialise(wimp_VERSION_RO3, "Lode Runner", NULL, NULL);
+    wimp_initialise(wimp_VERSION_RO3, "Lode Runner", NULL, NULL);
 
-   updateModeInfo();
-   spriteArea = loadSpriteFile("<LodeRunner$Dir>.sprites");
-   
-   // Load the first level
-   loadLevel(1);
-   
-   window = createWindow();
-   createWimpBlock(window);
+    updateModeInfo();
+    spriteArea = loadSpriteFile("<LodeRunner$Dir>.sprites");
 
-   initialiseTimer();
-   initialiseGame(&gameState);
+    loadLevel(1);
+    
+    window = createWindow();
+    createWimpBlock(window);
 
-   xwimp_open_window(&block->open);
+    initialiseTimer();
+    initialiseGame(&gameState);
 
-   osbool quit = FALSE;
-   while(!quit) {
-       wimp_event_no event = wimp_poll(0, block, NULL);
+    xwimp_open_window(&block->open);
 
-       if (event == wimp_NULL_REASON_CODE) {
-           updateTimer();
-       } else {
-           quit = update(event, block);
-       }
-   }
+    osbool quit = FALSE;
+    while(!quit) {
+        wimp_event_no event = wimp_poll(0, block, NULL);
 
-   free(block);
-   free(window);
-   wimp_close_down(0);
+        if (event == wimp_NULL_REASON_CODE) {
+            updateTimer();
+        } else {
+            quit = update(event, block);
+        }
+    }
 
-   return 0;
+    free(block);
+    free(window);
+    wimp_close_down(0);
+
+    return 0;
 }

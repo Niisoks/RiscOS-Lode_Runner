@@ -335,10 +335,14 @@ void updateMovementAnimation(GameState *state) {
         if (length > 0) {
             dx /= length;
             dy /= length;
+            
+            player->prevVisualX = player->visualX;
+            player->prevVisualY = player->visualY;
+            player->hasMoved = 1;
+            
+            player->visualX += dx * state->pixelSpeed;
+            player->visualY += dy * state->pixelSpeed;
         }
-
-        player->visualX += dx * state->pixelSpeed;
-        player->visualY += dy * state->pixelSpeed;
 
         float distToTarget = sqrt(
             pow(player->targetX - player->visualX, 2) + 
@@ -368,10 +372,14 @@ void updateMovementAnimation(GameState *state) {
             if (length > 0) {
                 dx /= length;
                 dy /= length;
+                
+                enemy->prevVisualX = enemy->visualX;
+                enemy->prevVisualY = enemy->visualY;
+                enemy->hasMoved = 1;
+                
+                enemy->visualX += dx * state->pixelSpeed;
+                enemy->visualY += dy * state->pixelSpeed;
             }
-
-            enemy->visualX += dx * state->pixelSpeed;
-            enemy->visualY += dy * state->pixelSpeed;
 
             float distToTarget = sqrt(
                 pow(enemy->targetX - enemy->visualX, 2) + 

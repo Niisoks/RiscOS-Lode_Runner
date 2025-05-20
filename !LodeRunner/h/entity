@@ -32,7 +32,9 @@ typedef struct {
     int inHole;
     int isDigging;
     int digDirection;
-    int digTimer; 
+    int digTimer;
+    float prevVisualX, prevVisualY;
+    int hasMoved;
 } Entity;
 
 typedef struct {
@@ -80,6 +82,7 @@ extern osspriteop_header *enemyRopeSprite1, *enemyRopeSprite2, *enemyRopeSprite3
 extern osspriteop_header *wallSprite, *ladderSprite, *goldSprite, *holeSprite, *tightropeSprite;
 extern os_factors factors;
 extern osspriteop_area *spriteArea;
+extern osspriteop_header *blackSquareSprite;
 
 void initialiseAnimStates(void);
 void updateAnimationFrames(GameState *state);

@@ -20,6 +20,7 @@ osspriteop_header *enemyClimbSprite1, *enemyClimbSprite2, *enemyClimbSprite3, *e
 osspriteop_header *enemyFallSprite1, *enemyFallSprite2;
 osspriteop_header *enemyRopeSprite1, *enemyRopeSprite2, *enemyRopeSprite3, *enemyRopeSprite4;
 osspriteop_header *wallSprite, *ladderSprite, *goldSprite, *holeSprite, *tightropeSprite;
+osspriteop_header *blackSquareSprite;
 os_factors factors;
 osspriteop_trans_tab *transTab;
 
@@ -94,6 +95,8 @@ osspriteop_area* loadSpriteFile(const char *filename) {
     xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemyrope2", &enemyRopeSprite2);
     xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemyrope3", &enemyRopeSprite3);
     xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemyrope4", &enemyRopeSprite4);
+
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"blacksq", &blackSquareSprite);
 
     factors.xmul = (1<<(modeInfo.info.xEigFactor-1)) * GAME_SIZE;
     factors.ymul = 1<<(modeInfo.info.yEigFactor) * GAME_SIZE;
