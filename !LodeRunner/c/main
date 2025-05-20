@@ -4,6 +4,23 @@
 #include <math.h>
 #include "main.h"
 
+char map[HEIGHT][WIDTH + 1] = {
+    "####################",
+    "#         H        #",
+    "#  H###H###H#####  #",
+    "#  H#  H  #H       #",
+    "#  H# #H# #H  ######",
+    "#  H# #H# #H    G  #",
+    "# #H# #H# #####H#  #",
+    "#  H   H#  G   H   #",
+    "#  H   H     H######",
+    "#  H   H     H#    #",
+    "#  H   H           #",
+    "#  H   H    ##H    #",
+    "#  H   H      H    #",
+    "####################",
+};
+
 typedef union {
     int numbers[14];
     struct {
@@ -58,7 +75,7 @@ osspriteop_area* loadSpriteFile(const char *filename) {
     osspriteop_area *area = malloc(size);
     area->size = size;
     area->first = 16;
-    
+
     xosspriteop_load_sprite_file(osspriteop_USER_AREA, area, filename);
 
     e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runner1", &playerSprite1);
@@ -68,7 +85,7 @@ osspriteop_area* loadSpriteFile(const char *filename) {
     e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"wall", &wallSprite);
     e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"ladder", &ladderSprite);
     e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"gold", &goldSprite);
-    
+
     factors.xmul = (1<<(modeInfo.info.xEigFactor-1)) * GAME_SIZE;
     factors.ymul = 1<<(modeInfo.info.yEigFactor) * GAME_SIZE;
     factors.xdiv = 1;
@@ -82,8 +99,8 @@ wimp_window* createWindow() {
 
     window->visible.x0 = 0;
     window->visible.y0 = 0;
-    window->visible.x1 = 640;
-    window->visible.y1 = 480;
+    window->visible.x1 = WIDTH * TILE_SIZE;
+    window->visible.y1 = HEIGHT * TILE_SIZE;
     window->xscroll = 0;
     window->yscroll = 0;
     window->next = wimp_TOP;
@@ -104,12 +121,12 @@ wimp_window* createWindow() {
     window->scroll_outer = wimp_COLOUR_MID_LIGHT_GREY;
     window->scroll_inner = wimp_COLOUR_VERY_LIGHT_GREY;
     window->highlight_bg = wimp_COLOUR_CREAM;
-    
+
     window->extent.x0 = 0;
-    window->extent.y0 = -480;
-    window->extent.x1 = 640;
-    window->extent.y1 = 480;
-    
+    window->extent.y0 = -HEIGHT * TILE_SIZE * 2;
+    window->extent.x1 = WIDTH * TILE_SIZE;
+    window->extent.y1 = HEIGHT * TILE_SIZE * 2;
+
     window->title_flags = wimp_ICON_TEXT | wimp_ICON_HCENTRED | wimp_ICON_VCENTRED;
     window->work_flags = wimp_BUTTON_WRITABLE << wimp_ICON_BUTTON_TYPE_SHIFT;
     window->sprite_area = 0;
@@ -140,31 +157,58 @@ void redrawWindow(wimp_block *block) {
 }
 
 void render(wimp_draw *draw, osbool more) {
+    int x, y;
+
     while (more) {
+
         int baseX = draw->box.x0 - draw->xscroll;
         int baseY = draw->box.y1 - draw->yscroll;
-        
-        xosspriteop_put_sprite_scaled(
-            osspriteop_PTR, spriteArea, (osspriteop_id)playerSprite1,
-            baseX + 100, baseY - 100, 
-            os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES | osspriteop_USE_MASK,
-            &factors, transTab
-        );
-        
-        xosspriteop_put_sprite_scaled(
-            osspriteop_PTR, spriteArea, (osspriteop_id)wallSprite,
-            baseX + 200, baseY - 100, 
-            os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES | osspriteop_USE_MASK,
-            &factors, transTab
-        );
-        
+
+        for (y = 0; y < HEIGHT; y++) {
+            for (x = 0; x < WIDTH; x++) {
+                int screenX = baseX + (x * TILE_SIZE);
+                int screenY = baseY - (y * TILE_SIZE);
+                osspriteop_header *sprite = NULL;
+
+                switch (map[y][x]) {
+                    case '#': sprite = wallSprite; break;
+                    case 'H': sprite = ladderSprite; break;
+                    case 'G': sprite = goldSprite; break;
+                }
+
+                if (sprite != NULL) {
+                    xosspriteop_put_sprite_scaled(
+                        osspriteop_PTR, spriteArea, (osspriteop_id)sprite,
+                        screenX, screenY, 
+                        os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES | osspriteop_USE_MASK,
+                        &factors, transTab
+                    );
+                }
+            }
+        }
+
         xwimp_get_rectangle(draw, &more);
     }
+}
+
+void updateWindow(wimp_w window) {
+    wimp_draw draw;
+    int more;
+
+    draw.w = window;
+    draw.box.x0 = 0;
+    draw.box.y0 = -HEIGHT * TILE_SIZE * 2;
+    draw.box.x1 = WIDTH * TILE_SIZE; 
+    draw.box.y1 = HEIGHT * TILE_SIZE * 2;
+
+    xwimp_update_window(&draw, &more);
+    render(&draw, more);
 }
 
 osbool update(wimp_event_no event, wimp_block* block) {
     switch(event) {
         case wimp_KEY_PRESSED:
+
             break;
         case wimp_REDRAW_WINDOW_REQUEST:
             redrawWindow(block);
@@ -183,35 +227,37 @@ osbool update(wimp_event_no event, wimp_block* block) {
             }
             break;
     }
-    
+
     return FALSE;
 }
 
 int main() {
-    wimp_initialise(wimp_VERSION_RO3, "Lode Runner", NULL, NULL);
-    updateModeInfo();
-    spriteArea = loadSpriteFile("<LodeRunner$Dir>.sprites");
-    window = createWindow();
-    block = createWimpBlock(window);
-    initialiseTimer();
-    xwimp_open_window(&block->open);
-   
-   // Main loop
-    osbool quit = FALSE;
-    while(!quit) {
-        wimp_event_no event = wimp_poll(0, block, NULL);
-       
-        if (event == wimp_NULL_REASON_CODE) {
-            updateTimer();
-        } else {
-            quit = update(event, block);
-        }
-    }
-   
-   // Cleanup
-    free(block);
-    free(window);
-    wimp_close_down(0);
-   
-    return 0;
+
+   wimp_initialise(wimp_VERSION_RO3, "Lode Runner", NULL, NULL);
+
+   updateModeInfo();
+   spriteArea = loadSpriteFile("<LodeRunner$Dir>.sprites");
+   window = createWindow();
+   block = createWimpBlock(window);
+
+   initialiseTimer();
+
+   xwimp_open_window(&block->open);
+
+   osbool quit = FALSE;
+   while(!quit) {
+       wimp_event_no event = wimp_poll(0, block, NULL);
+
+       if (event == wimp_NULL_REASON_CODE) {
+           updateTimer();
+       } else {
+           quit = update(event, block);
+       }
+   }
+
+   free(block);
+   free(window);
+   wimp_close_down(0);
+
+   return 0;
 }
