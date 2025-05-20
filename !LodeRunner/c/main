@@ -1,435 +1,217 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "oslib/wimp.h"
-#include "oslib/os.h"        
-#include "oslib/osfile.h"
-#include "oslib/osspriteop.h"                    
-#include "oslib/colourtrans.h"
-
+#include <math.h>
 #include "main.h"
 
-static void main_initialise(void);
-static void main_poll(void);
-static void main_terminate(void);
-
-os_t timer;
-
-void (*timerCallback)(void*);       
-
-void *timerWorkspace;
-
-void initialiseTimer()
-{         
-   timer          = 0;
-   timerCallback  = NULL;
-   timerWorkspace = NULL;
-}
-
-void setTimer(int cs, void (*callback)(void*), void *ws)
-{
-   timer          = os_read_monotonic_time() + cs;
-   timerCallback  = callback;
-   timerWorkspace = ws;   
-}
-
-void updateTimer()
-{
-   if (timer > 0)
-   {      
-      os_t time = os_read_monotonic_time();
-
-      if (time >= timer)
-      {
-         timer = 0;
-         timerCallback(timerWorkspace);
-      }
-   }
-}
-
-
-// A lot of the code here is heavily referenced / lifted from gavins work. Consider this a temporary library of sorts.
-wimp_window *window;
-wimp_block  *block;
-wimp_w      renderSpace;
-
-wimp_window* createWindow()
-{
-   wimp_window* window = (wimp_window*)malloc(sizeof(wimp_window));
-
-   window->visible.x0   = 0;
-   window->visible.y0   = 0;
-   window->visible.x1   = 1000;
-   window->visible.y1   = 1000;
-   window->xscroll      = 0;
-   window->yscroll      = 0;
-   window->next         = wimp_TOP;
-   window->flags        = wimp_WINDOW_MOVEABLE
-                        | wimp_WINDOW_BACK_ICON
-                        | wimp_WINDOW_CLOSE_ICON
-                        | wimp_WINDOW_TITLE_ICON
-                        | wimp_WINDOW_HSCROLL
-                        | wimp_WINDOW_VSCROLL
-                        | wimp_WINDOW_TOGGLE_ICON
-                        | wimp_WINDOW_SIZE_ICON
-                        | wimp_WINDOW_NEW_FORMAT;
-   window->title_fg     = wimp_COLOUR_BLACK;
-   window->title_bg     = wimp_COLOUR_LIGHT_GREY;
-   window->work_fg      = wimp_COLOUR_WHITE;
-   window->work_bg      = wimp_COLOUR_BLACK;
-   window->scroll_outer = wimp_COLOUR_MID_LIGHT_GREY;
-   window->scroll_inner = wimp_COLOUR_VERY_LIGHT_GREY;
-   window->extent.x0    = 0;
-   window->extent.y0    = 0;
-   window->extent.x1    = 1000;
-   window->extent.y1    = 1000;
-   window->title_flags  = wimp_ICON_TEXT
-                        | wimp_ICON_HCENTRED
-                        | wimp_ICON_VCENTRED;
-   window->work_flags   = wimp_BUTTON_CLICK << wimp_ICON_BUTTON_TYPE_SHIFT;
-   window->sprite_area  = 0;
-   window->xmin         = 0;
-   window->ymin         = 0;
-   window->icon_count   = 0;
-
-   strncpy(window->title_data.text, "Lode Runner", 12);
-
-   return window;
-}
-
-
-typedef union
-{        
-   int numbers[14];
-
-   struct
-   {    
-      int modeFlags,
-          scrRCol,
-          scrBRow,
-          nColour,
-          xEigFactor,
-          yEigFactor,
-          lineLength,  
-          screenSize,
-          yShiftSize,
-          log2bpp,
-          log2bpc,
-          xWindLimit,
-          yWindLimit,
-          minScreenBanks;
-   }
-   info;
-}
-ModeInfo;      
+typedef union {
+    int numbers[14];
+    struct {
+        int modeFlags, scrRCol, scrBRow, nColour,
+            xEigFactor, yEigFactor, lineLength, screenSize,
+            yShiftSize, log2bpp, log2bpc, xWindLimit,
+            yWindLimit, minScreenBanks;
+    } info;
+} ModeInfo;
 
 ModeInfo modeInfo;
-         
-void updateModeInfo()
-{                                      
-   for (int i = 0; i < 15; i++)
-   {
-      modeInfo.numbers[i] = i;
-   }
 
-   modeInfo.numbers[14] = -1;
-
-   os_error *e = xos_read_vdu_variables((os_vdu_var_list*)modeInfo.numbers, 
-                                        modeInfo.numbers);
-
+void initialiseTimer() {
+    timer = 0;
+    timerCallback = NULL;
+    timerWorkspace = NULL;
 }
 
-osspriteop_area *area;
+void setTimer(int cs, void (*callback)(void*), void *ws) {
+    timer = os_read_monotonic_time() + cs;
+    timerCallback = callback;
+    timerWorkspace = ws;   
+}
 
-osspriteop_header *invader1, *invader2;
-
-os_factors factors;
-
-osspriteop_trans_tab *transTab;
-
-osspriteop_area* loadSpriteFile(const char *filename)
-{                                                       
-   int size;
-
-   bits type;
-
-   fileswitch_object_type objType;
-
-   xosfile_read_stamped_no_path(filename, &objType, NULL, NULL, &size, NULL, &type);
-   
-   size += sizeof(int);
-
-   osspriteop_area *area = malloc(size);
-
-   area->size  = size;
-   area->first = 16; // Size of the sprite?
-   
-   xosspriteop_load_sprite_file(osspriteop_USER_AREA, area, filename);
-
-   // determine more efficient sprite pointer ids                                  
-   os_error *e = xosspriteop_select_sprite(osspriteop_USER_AREA, 
-                                     area, 
-                                     (osspriteop_id)"runner1",
-                                     &invader1);
-
-        if(e != NULL){
-                printf("Problem with sprite 1");
-                
+void updateTimer() {
+    if (timer > 0) {      
+        os_t time = os_read_monotonic_time();
+        if (time >= timer) {
+            timer = 0;
+            timerCallback(timerWorkspace);
         }
+    }
+}
+
+void updateModeInfo() {                                      
+    int i;
+    for (i = 0; i < 15; i++) {
+        modeInfo.numbers[i] = i;
+    }
+    modeInfo.numbers[14] = -1;
+    xos_read_vdu_variables((os_vdu_var_list*)modeInfo.numbers, modeInfo.numbers);
+}
+
+osspriteop_area* loadSpriteFile(const char *filename) {                                                       
+    int size;
+    bits type;
+    fileswitch_object_type objType;
+    os_error *e;
+
+    xosfile_read_stamped_no_path(filename, &objType, NULL, NULL, &size, NULL, &type);
+    size += sizeof(int);
+    osspriteop_area *area = malloc(size);
+    area->size = size;
+    area->first = 16;
     
-   e = xosspriteop_select_sprite(osspriteop_USER_AREA, 
-                                 area, 
-                                 (osspriteop_id)"runner2",
-                                 &invader2);
+    xosspriteop_load_sprite_file(osspriteop_USER_AREA, area, filename);
 
-        if(e != NULL){
-                printf("Problem with sprite 2");
-        }    
-   // set up factors and translation table
-
-   factors.xmul = 1<<(modeInfo.info.xEigFactor-1);
-   factors.ymul = 1<<(modeInfo.info.yEigFactor);
-   factors.xdiv = 1;
-   factors.ydiv = 1;         
-
-   e = xcolourtrans_generate_table_for_sprite(area,  
-                                       (osspriteop_id)"runner1",    
-                                       (os_mode)-1,   
-                                       (os_palette*)-1,    
-                                       NULL,
-                                       colourtrans_CURRENT_IF_ABSENT |
-                                       colourtrans_RETURN_WIDE_ENTRIES,
-                                       NULL,
-                                       NULL,
-                                       &size);
-
-   transTab = malloc(size);
-
-   e = xcolourtrans_generate_table_for_sprite(area, 
-                                    (osspriteop_id)"runner2",   
-                                    (os_mode)-1,   
-                                    (os_palette*)-1,   
-                                    transTab,
-                                    colourtrans_CURRENT_IF_ABSENT |
-                                    colourtrans_RETURN_WIDE_ENTRIES,
-                                    NULL,
-                                    NULL,
-                                    &size);
-   
-   
-   return area;
-}
-
-void updateGame(void *ws)
-{                                               
-   GameState* state = (GameState*)ws;
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runner1", &playerSprite1);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runner2", &playerSprite2);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemy1", &enemySprite1);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemy2", &enemySprite2);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"wall", &wallSprite);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"ladder", &ladderSprite);
+    e = xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"gold", &goldSprite);
     
-   state->frame++;              
+    factors.xmul = (1<<(modeInfo.info.xEigFactor-1)) * GAME_SIZE;
+    factors.ymul = 1<<(modeInfo.info.yEigFactor) * GAME_SIZE;
+    factors.xdiv = 1;
+    factors.ydiv = 2;         
 
-   if (state->frame%4 == 0)
-   {
-      state->sprite = state->sprite == invader1 ? invader2 : invader1; 
-   }
-
-   if ((state->x >> 8) >= 640 - 72)
-   {
-      state->dx = -(2 << 8); 
-   }                        
-   else if ((state->x >> 8) < 0)
-   {
-      state->dx = +(2 << 8);
-   }  
-
-   if ((state->y >> 8) >= 512 - 68)
-   {
-      state->dy = -(2 << 8);
-   }                        
-   else if ((state->y >> 8) < 0)
-   {
-      state->dy = +(2 << 8);
-   } 
-
-   state->x += state->dx;
-   state->y += state->dy;
-
-   // wimp_force_redraw(block->open.w, 0, 0, 640, +512); 
-   updateWindow(renderSpace);
-
-   setTimer(4, updateGame, ws);   
+    return area;
 }
 
-GameState state;
+wimp_window* createWindow() {
+    wimp_window* window = (wimp_window*)malloc(sizeof(wimp_window));
 
-void initialiseGame(GameState *state)
-{
-   state->sprite = invader1;
-   state->x      = 320 << 8;
-   state->y      = 256 << 8;
-   state->dx     = 2 << 8;
-   state->dy     = 2 << 8;
-   state->frame  = 0;
+    window->visible.x0 = 0;
+    window->visible.y0 = 0;
+    window->visible.x1 = 640;
+    window->visible.y1 = 480;
+    window->xscroll = 0;
+    window->yscroll = 0;
+    window->next = wimp_TOP;
+    window->flags = wimp_WINDOW_MOVEABLE  
+                  | wimp_WINDOW_BACK_ICON 
+                  | wimp_WINDOW_CLOSE_ICON 
+                  | wimp_WINDOW_TITLE_ICON 
+                  | wimp_WINDOW_TOGGLE_ICON 
+                  | wimp_WINDOW_SIZE_ICON 
+                  | wimp_WINDOW_NEW_FORMAT
+                  | wimp_WINDOW_HAS_FOCUS
+                  | wimp_WINDOW_HOT_KEYS
+                  | wimp_WINDOW_SCROLL;
+    window->title_fg = wimp_COLOUR_BLACK;
+    window->title_bg = wimp_COLOUR_LIGHT_GREY;
+    window->work_fg = wimp_COLOUR_WHITE;
+    window->work_bg = wimp_COLOUR_BLACK; 
+    window->scroll_outer = wimp_COLOUR_MID_LIGHT_GREY;
+    window->scroll_inner = wimp_COLOUR_VERY_LIGHT_GREY;
+    window->highlight_bg = wimp_COLOUR_CREAM;
+    
+    window->extent.x0 = 0;
+    window->extent.y0 = -480;
+    window->extent.x1 = 640;
+    window->extent.y1 = 480;
+    
+    window->title_flags = wimp_ICON_TEXT | wimp_ICON_HCENTRED | wimp_ICON_VCENTRED;
+    window->work_flags = wimp_BUTTON_WRITABLE << wimp_ICON_BUTTON_TYPE_SHIFT;
+    window->sprite_area = 0;
+    window->xmin = 0;
+    window->ymin = 0;
+    window->icon_count = 0;
 
-   setTimer(64, updateGame, (void*)state);
+    strncpy(window->title_data.text, "Lode Runner", 12);
+
+    return window;
 }
 
-wimp_block* createWimpBlock(wimp_window* window)
-{
-   wimp_block* block = (wimp_block*)malloc(sizeof(wimp_block));
-
-   block->open.w       = wimp_create_window(window);
-   block->open.visible = window->visible;
-   block->open.xscroll = window->xscroll;
-   block->open.yscroll = window->yscroll;
-   block->open.next    = window->next;
-   renderSpace         = block->open.w;
-
-   return block;
+wimp_block* createWimpBlock(wimp_window* window) {
+    wimp_block* block = (wimp_block*)malloc(sizeof(wimp_block));
+    block->open.w = wimp_create_window(window);
+    block->open.visible = window->visible;
+    block->open.xscroll = window->xscroll;
+    block->open.yscroll = window->yscroll;
+    block->open.next = window->next;
+    gameWindow = block->open.w;
+    return block;
 }
 
-void render(wimp_draw *draw, osbool more)
-{
-   while (more)
-   {
-      int x = draw->box.x0 - draw->xscroll;
-      int y = draw->box.y1 - draw->yscroll; 
+void redrawWindow(wimp_block *block) {
+    int more;
+    xwimp_redraw_window(&block->redraw, &more);
+    render(&block->redraw, more);
+}
 
-        os_error *e = xosspriteop_put_sprite_scaled(osspriteop_PTR,
-                        area,
-                        (osspriteop_id)state.sprite,
-                        x + (state.x >> 8),
-                        y + (state.y >> 8),
-                        os_ACTION_OVERWRITE |
-                        osspriteop_GIVEN_WIDE_ENTRIES | osspriteop_USE_MASK,
-                        &factors,
-                        transTab);
+void render(wimp_draw *draw, osbool more) {
+    while (more) {
+        int baseX = draw->box.x0 - draw->xscroll;
+        int baseY = draw->box.y1 - draw->yscroll;
+        
+        xosspriteop_put_sprite_scaled(
+            osspriteop_PTR, spriteArea, (osspriteop_id)playerSprite1,
+            baseX + 100, baseY - 100, 
+            os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES | osspriteop_USE_MASK,
+            &factors, transTab
+        );
+        
+        xosspriteop_put_sprite_scaled(
+            osspriteop_PTR, spriteArea, (osspriteop_id)wallSprite,
+            baseX + 200, baseY - 100, 
+            os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES | osspriteop_USE_MASK,
+            &factors, transTab
+        );
         
         xwimp_get_rectangle(draw, &more);
     }
 }
 
-void updateWindow(wimp_w window)
-{
-   wimp_draw draw;     
-
-   // only update window where invader appears
-   
-   draw.w      = window;
-   draw.box.x0 = (state.x >> 8);
-   draw.box.y0 = (state.y >> 8);
-   draw.box.x1 = draw.box.x0 + (38 << 1);
-   draw.box.y1 = draw.box.y0 + (19 << 2);
-            
-   int more;
-
-   xwimp_update_window(&draw, &more);
-
-   render(&draw, more);
-}
-
-void redrawWindow(wimp_block *block)
-{
-   int more;
-
-   xwimp_redraw_window(&block->redraw, &more);
-
-   render(&block->redraw, more);
-}
-
-
-osbool update(wimp_event_no event, wimp_block* block)
-{
-   switch(event)
-   {
-      case wimp_REDRAW_WINDOW_REQUEST:
-      {
-         redrawWindow(block);
-         break;
-      }
-      case wimp_OPEN_WINDOW_REQUEST:
-      {
-         wimp_open_window(&block->open);
-
-         break;
-      }
-      case wimp_CLOSE_WINDOW_REQUEST:
-      {
-         wimp_close_window(block->close.w);
-
-         return TRUE;
-      }
-      case wimp_USER_MESSAGE:
-      {
-        break;
-      }
-      case wimp_USER_MESSAGE_RECORDED:
-      {
-         if(block->message.action == message_QUIT)
-         {
+osbool update(wimp_event_no event, wimp_block* block) {
+    switch(event) {
+        case wimp_KEY_PRESSED:
+            break;
+        case wimp_REDRAW_WINDOW_REQUEST:
+            redrawWindow(block);
+            break;
+        case wimp_OPEN_WINDOW_REQUEST:
+            wimp_open_window(&block->open);
+            break;
+        case wimp_CLOSE_WINDOW_REQUEST:
+            wimp_close_window(block->close.w);
             return TRUE;
-         }
-
-         break;
-      }
-   }
-
-   return FALSE;
+        case wimp_USER_MESSAGE:
+            break;
+        case wimp_USER_MESSAGE_RECORDED:
+            if(block->message.action == message_QUIT) {
+                return TRUE;
+            }
+            break;
+    }
+    
+    return FALSE;
 }
 
-int main()
-{
-  main_initialise();
-  main_poll();
-  main_terminate();
-
-  return 0;
-}
-
-static void main_initialise(void)
-{
-        wimp_initialise(wimp_VERSION_RO3, "Loderunner", NULL, NULL);
-        updateModeInfo();
-        area = loadSpriteFile("<Loderunner$Dir>.sprites");
-        window = createWindow();
-        block = createWimpBlock(window);
-
-        block->open.visible.x0 = 0;
-        block->open.visible.y0 = 0;
-        block->open.visible.x1 = 1000;
-        block->open.visible.y1 = 1000;
-
-        
-
-        
-           initialiseTimer();
-   initialiseGame(&state);
-   xwimp_open_window(&block->open);
-
-}
-
-static void main_poll(void)
-{
-           osbool quit = FALSE;
-
-   while(!quit)
-   {
-      wimp_event_no event = wimp_poll(0, block, NULL);
-                     
-      if (event == wimp_NULL_REASON_CODE)
-      {
-         updateTimer();
-      }
-      else
-      {  
-         quit = update(event, block);
-      }
-   }
-  return;
-}
-
-static void main_terminate(void)
-{
-        free(block);
-        free(window);
-        wimp_close_down(0);
+int main() {
+    wimp_initialise(wimp_VERSION_RO3, "Lode Runner", NULL, NULL);
+    updateModeInfo();
+    spriteArea = loadSpriteFile("<LodeRunner$Dir>.sprites");
+    window = createWindow();
+    block = createWimpBlock(window);
+    initialiseTimer();
+    xwimp_open_window(&block->open);
+   
+   // Main loop
+    osbool quit = FALSE;
+    while(!quit) {
+        wimp_event_no event = wimp_poll(0, block, NULL);
+       
+        if (event == wimp_NULL_REASON_CODE) {
+            updateTimer();
+        } else {
+            quit = update(event, block);
+        }
+    }
+   
+   // Cleanup
+    free(block);
+    free(window);
+    wimp_close_down(0);
+   
+    return 0;
 }
