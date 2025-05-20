@@ -1,0 +1,205 @@
+#include "wimp.h"
+#include "entity.h"
+#include <stdlib.h>
+#include <string.h>
+
+wimp_window *window;
+wimp_block *block;
+wimp_w gameWindow;
+osspriteop_area *spriteArea;
+
+osspriteop_header *playerSprite1, *playerSprite2;
+osspriteop_header *playerSprite3, *playerSprite4;
+osspriteop_header *playerClimbSprite1, *playerClimbSprite2, *playerClimbSprite3, *playerClimbSprite4;
+osspriteop_header *playerDigSprite1, *playerDigSprite2;
+osspriteop_header *playerFallSprite1, *playerFallSprite2;
+osspriteop_header *playerRopeSprite1, *playerRopeSprite2, *playerRopeSprite3, *playerRopeSprite4;
+osspriteop_header *enemySprite1, *enemySprite2;
+osspriteop_header *enemySprite3, *enemySprite4;
+osspriteop_header *enemyClimbSprite1, *enemyClimbSprite2, *enemyClimbSprite3, *enemyClimbSprite4;
+osspriteop_header *enemyFallSprite1, *enemyFallSprite2;
+osspriteop_header *enemyRopeSprite1, *enemyRopeSprite2, *enemyRopeSprite3, *enemyRopeSprite4;
+osspriteop_header *wallSprite, *ladderSprite, *goldSprite, *holeSprite, *tightropeSprite;
+os_factors factors;
+osspriteop_trans_tab *transTab;
+
+typedef union {
+    int numbers[14];
+    struct {
+        int modeFlags, scrRCol, scrBRow, nColour,
+            xEigFactor, yEigFactor, lineLength, screenSize,
+            yShiftSize, log2bpp, log2bpc, xWindLimit,
+            yWindLimit, minScreenBanks;
+    } info;
+} ModeInfo;
+
+ModeInfo modeInfo;
+
+void updateModeInfo(void) {                                      
+    int i;
+    for (i = 0; i < 15; i++) {
+        modeInfo.numbers[i] = i;
+    }
+    modeInfo.numbers[14] = -1;
+    xos_read_vdu_variables((os_vdu_var_list*)modeInfo.numbers, modeInfo.numbers);
+}
+
+osspriteop_area* loadSpriteFile(const char *filename) {                                                       
+    int size;
+    bits type;
+    fileswitch_object_type objType;
+
+    xosfile_read_stamped_no_path(filename, &objType, NULL, NULL, &size, NULL, &type);
+    size += sizeof(int);
+    osspriteop_area *area = malloc(size);
+    area->size = size;
+    area->first = 16;
+
+    xosspriteop_load_sprite_file(osspriteop_USER_AREA, area, filename);
+
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runner1", &playerSprite1);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runner2", &playerSprite2);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemy1", &enemySprite1);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemy2", &enemySprite2);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"wall", &wallSprite);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"ladder", &ladderSprite);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"gold", &goldSprite);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"hole", &holeSprite);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"tightrope", &tightropeSprite);
+
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runner3", &playerSprite3);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runner4", &playerSprite4);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runnerclimb1", &playerClimbSprite1);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runnerclimb2", &playerClimbSprite2);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runnerclimb3", &playerClimbSprite3);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runnerclimb4", &playerClimbSprite4);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runnerdig1", &playerDigSprite1);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runnerdig2", &playerDigSprite2);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runnerfall1", &playerFallSprite1);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runnerfall2", &playerFallSprite2);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runnerrope1", &playerRopeSprite1);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runnerrope2", &playerRopeSprite2);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runnerrope3", &playerRopeSprite3);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runnerrope4", &playerRopeSprite4);
+
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemy3", &enemySprite3);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemy4", &enemySprite4);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemyclimb1", &enemyClimbSprite1);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemyclimb2", &enemyClimbSprite2);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemyclimb3", &enemyClimbSprite3);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemyclimb4", &enemyClimbSprite4);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemyfall1", &enemyFallSprite1);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemyfall2", &enemyFallSprite2);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemyrope1", &enemyRopeSprite1);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemyrope2", &enemyRopeSprite2);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemyrope3", &enemyRopeSprite3);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemyrope4", &enemyRopeSprite4);
+
+    factors.xmul = (1<<(modeInfo.info.xEigFactor-1)) * GAME_SIZE;
+    factors.ymul = 1<<(modeInfo.info.yEigFactor) * GAME_SIZE;
+    factors.xdiv = 1;
+    factors.ydiv = 2;         
+
+    return area;
+}
+
+wimp_window* createWindow(void) {
+    wimp_window* window = (wimp_window*)malloc(sizeof(wimp_window));
+
+    window->visible.x0 = 0;
+    window->visible.y0 = 0;
+    window->visible.x1 = WIDTH * TILE_SIZE;
+    window->visible.y1 = HEIGHT * TILE_SIZE;
+    window->xscroll = 0;
+    window->yscroll = 0;
+    window->next = wimp_TOP;
+    window->flags = wimp_WINDOW_MOVEABLE  
+                  | wimp_WINDOW_BACK_ICON 
+                  | wimp_WINDOW_CLOSE_ICON 
+                  | wimp_WINDOW_TITLE_ICON 
+                  | wimp_WINDOW_TOGGLE_ICON 
+                  | wimp_WINDOW_SIZE_ICON 
+                  | wimp_WINDOW_NEW_FORMAT
+                  | wimp_WINDOW_HAS_FOCUS
+                  | wimp_WINDOW_HOT_KEYS
+                  | wimp_WINDOW_SCROLL;
+    window->title_fg = wimp_COLOUR_BLACK;
+    window->title_bg = wimp_COLOUR_LIGHT_GREY;
+    window->work_fg = wimp_COLOUR_WHITE;
+    window->work_bg = wimp_COLOUR_BLACK; 
+    window->scroll_outer = wimp_COLOUR_MID_LIGHT_GREY;
+    window->scroll_inner = wimp_COLOUR_VERY_LIGHT_GREY;
+    window->highlight_bg = wimp_COLOUR_CREAM;
+
+    window->extent.x0 = 0;
+    window->extent.y0 = -HEIGHT * TILE_SIZE * 2;
+    window->extent.x1 = WIDTH * TILE_SIZE;
+    window->extent.y1 = HEIGHT * TILE_SIZE * 2;
+
+    window->title_flags = wimp_ICON_TEXT | wimp_ICON_HCENTRED | wimp_ICON_VCENTRED;
+    window->work_flags = wimp_BUTTON_WRITABLE << wimp_ICON_BUTTON_TYPE_SHIFT;
+    window->sprite_area = 0;
+    window->xmin = 0;
+    window->ymin = 0;
+    window->icon_count = 0;
+
+    strncpy(window->title_data.text, "Lode Runner", 12);
+
+    return window;
+}
+
+void createWimpBlock(wimp_window* window) {
+    block = (wimp_block*)malloc(sizeof(wimp_block));
+    block->open.w = wimp_create_window(window);
+    block->open.visible = window->visible;
+    block->open.xscroll = window->xscroll;
+    block->open.yscroll = window->yscroll;
+    block->open.next = window->next;
+    gameWindow = block->open.w;
+}
+
+void redrawWindow(wimp_block *block) {
+    int more;
+    xwimp_redraw_window(&block->redraw, &more);
+    render(&block->redraw, more);
+}
+
+void updateWindow(wimp_w window) {
+    wimp_draw draw;
+    int more;
+
+    draw.w = window;
+    draw.box.x0 = 0;
+    draw.box.y0 = -HEIGHT * TILE_SIZE * 2;
+    draw.box.x1 = WIDTH * TILE_SIZE; 
+    draw.box.y1 = HEIGHT * TILE_SIZE * 2;
+
+    xwimp_update_window(&draw, &more);
+    render(&draw, more);
+}
+
+osbool update(wimp_event_no event, wimp_block* block) {
+    switch(event) {
+        case wimp_KEY_PRESSED:
+            processKeyPress(block->key.c, &gameState);
+            break;
+        case wimp_REDRAW_WINDOW_REQUEST:
+            redrawWindow(block);
+            break;
+        case wimp_OPEN_WINDOW_REQUEST:
+            wimp_open_window(&block->open);
+            break;
+        case wimp_CLOSE_WINDOW_REQUEST:
+            wimp_close_window(block->close.w);
+            return TRUE;
+        case wimp_USER_MESSAGE:
+            break;
+        case wimp_USER_MESSAGE_RECORDED:
+            if(block->message.action == message_QUIT) {
+                return TRUE;
+            }
+            break;
+    }
+
+    return FALSE;
+}

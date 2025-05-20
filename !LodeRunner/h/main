@@ -6,130 +6,26 @@
 #include "oslib/osfile.h"
 #include "oslib/osspriteop.h"                    
 #include "oslib/colourtrans.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-typedef enum {
-    NEUTRAL = 0,
-    LEFT = 1,
-    RIGHT = 2,
-    UP = 3,
-    DOWN = 4
-} Direction;
+#include "entity.h"
 
-#define GAME_SIZE 2
-#define WIDTH 20
-#define HEIGHT 20
-#define TILE_SIZE (32 * GAME_SIZE)
-#define HOLE_REGENERATION_TIME 300  // (3 seconds)
-#define WALL_PADDING 0.0f
+extern int keyState[4];
+extern int keyPressedThisFrame[4];
 
-typedef struct {
-    int tileX, tileY;
-    float visualX, visualY;
-    float targetX, targetY;
-    int isMoving;
-    Direction moveDir;
-    int inHole;
-    int isDigging;
-    int digDirection; // neg is left pos is right
-    int digTimer; 
-} Entity;
-
-typedef struct {
-    Entity player;
-    Entity enemies[5];
-    int enemyCount;
-    int goldCollected;
-    int goldTotal;
-    int frame;
-    int gameOver;
-    float pixelSpeed;
-    int enemyUpdateCooldown;
-} GameState;
-
-typedef struct {
-    int walkFrame;
-    int climbFrame;
-    int ropeFrame;
-    int fallFrame;
-    int lastWalkFrame;
-    int lastClimbFrame;
-    int lastRopeFrame;
-} AnimationState;
-
-GameState gameState;
-os_t timer;
-void (*timerCallback)(void*);
-void *timerWorkspace;
-wimp_window *window;
-wimp_block *block;
-wimp_w gameWindow;
-osspriteop_area *spriteArea;
-
-osspriteop_header *playerSprite1, *playerSprite2;
-osspriteop_header *playerSprite3, *playerSprite4;
-osspriteop_header *playerClimbSprite1, *playerClimbSprite2, *playerClimbSprite3, *playerClimbSprite4;
-osspriteop_header *playerDigSprite1, *playerDigSprite2;
-osspriteop_header *playerFallSprite1, *playerFallSprite2;
-osspriteop_header *playerRopeSprite1, *playerRopeSprite2, *playerRopeSprite3, *playerRopeSprite4;
-osspriteop_header *enemySprite1, *enemySprite2;
-osspriteop_header *enemySprite3, *enemySprite4;
-osspriteop_header *enemyClimbSprite1, *enemyClimbSprite2, *enemyClimbSprite3, *enemyClimbSprite4;
-osspriteop_header *enemyFallSprite1, *enemyFallSprite2;
-osspriteop_header *enemyRopeSprite1, *enemyRopeSprite2, *enemyRopeSprite3, *enemyRopeSprite4;
-osspriteop_header *wallSprite, *ladderSprite, *goldSprite, *holeSprite, *tightropeSprite;
-os_factors factors;
-osspriteop_trans_tab *transTab;
-
-AnimationState playerAnim;
-AnimationState enemyAnims[5];
-
-os_t holeTimer[HEIGHT][WIDTH];
-int dug[HEIGHT][WIDTH];
-
-int keyState[4];
-int keyPressedThisFrame[4];
-int playerIsFalling;
+extern os_t timer;
+extern void (*timerCallback)(void*);
+extern void *timerWorkspace;
 
 void initialiseTimer(void);
 void setTimer(int cs, void (*callback)(void*), void *ws);
 void updateTimer(void);
-void updateModeInfo(void);
-osspriteop_area* loadSpriteFile(const char *filename);
-wimp_window* createWindow(void);
-wimp_block* createWimpBlock(wimp_window* window);
-
-void render(wimp_draw *draw, osbool more);
-void updateWindow(wimp_w window);
-void redrawWindow(wimp_block *block);
-osbool update(wimp_event_no event, wimp_block* block);
-
 void initialiseGame(GameState *state);
-void initialiseAnimStates(void);
-void updateGame(void *ws);
 void processKeyPress(int keyCode, GameState *state);
 void trackKeyStates(GameState *state);
-int isClimbable(int x, int y);
-int isSolid(int x, int y);
-int isLadderTop(int x, int y);
-int isOnTightrope(int x, int y);
-int isTightrope(int x, int y);
-void moveEntity(GameState *state, Entity *entity, Direction dir, int isPlayer);
-void updateMovementAnimation(GameState *state);
-void updateLogicalPosition(Entity *entity);
-void applyGravity(GameState *state);
-void checkForGold(GameState *state);
-void updateEnemies(GameState *state);
-int checkCollision(GameState *state);
-void dig(GameState *state, int dx);
-void updateHoleTimers(GameState *state);
-int isInHole(int x, int y);
-int findSafePosition(int x, int y, int *newX, int *newY);
+void updateGame(void *ws);
 void countGold(GameState *state);
-int isWalkable(int x, int y, GameState *state);
-int supports(int x, int y, GameState *state);
-int isEnemyInHoleAt(GameState *state, int x, int y);
 
-void updateAnimationFrames(GameState *state);
-osspriteop_header* getEntitySprite(Entity *entity, GameState *state, int isPlayer, int entityIndex);
-
-#endif /* MAIN_H */
+#endif
