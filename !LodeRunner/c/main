@@ -2,6 +2,7 @@
 #include "entity.h"
 #include "render.h"
 #include "wimp.h"
+#include "enemy.h"
 
 char map[HEIGHT][WIDTH + 1];
 int currentLevel = 1;
@@ -237,7 +238,7 @@ void updateGame(void *ws) {
     if (!state->player.isMoving) {
         applyGravity(state);
     }
-    updateEnemies(state);
+    updateEnemyAI(state);  // Use the new enemy AI function
     updateHoleTimers(state);
     checkForGold(state);
 
@@ -249,7 +250,7 @@ void updateGame(void *ws) {
     xwimp_get_window_info_header_only(&window_info);
     strncpy(window_info.title_data.text, statusText, 31);
 
-    if (checkCollision(state)) {
+    if (checkCollision(state)) {  // Uses the new collision check function
         state->gameOver = 1;
         strncpy(window_info.title_data.text, "Game Over! Press any number key to restart", 42);
     }
@@ -303,7 +304,7 @@ int main(void) {
     spriteArea = loadSpriteFile("<LodeRunner$Dir>.sprites");
 
     loadLevel(1);
-    
+
     window = createWindow();
     createWimpBlock(window);
 

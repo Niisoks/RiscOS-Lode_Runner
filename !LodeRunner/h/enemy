@@ -1,0 +1,18 @@
+#ifndef ENEMY_H
+#define ENEMY_H
+
+#include "entity.h"
+
+extern AnimationState enemyAnims[5];
+
+void initialiseEnemyAnimStates(void);
+void updateEnemyAnimationFrames(GameState *state);
+osspriteop_header* getEnemySprite(Entity *enemy, GameState *state, int entityIndex);
+void moveEnemy(GameState *state, Entity *enemy, Direction dir);
+int isEnemyInHoleAt(GameState *state, int x, int y);
+void applyEnemyGravity(GameState *state);
+void updateEnemyAI(GameState *state);
+int checkEnemyCollisions(GameState *state);
+void updateEnemyHoleTimers(GameState *state);
+
+#endif

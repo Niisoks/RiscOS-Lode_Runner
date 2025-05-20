@@ -65,7 +65,6 @@ extern int dug[HEIGHT][WIDTH];
 extern int playerIsFalling;
 
 extern AnimationState playerAnim;
-extern AnimationState enemyAnims[5];
 extern GameState gameState;
 
 extern osspriteop_header *playerSprite1, *playerSprite2;
@@ -84,16 +83,14 @@ extern os_factors factors;
 extern osspriteop_area *spriteArea;
 extern osspriteop_header *blackSquareSprite;
 
-void initialiseAnimStates(void);
-void updateAnimationFrames(GameState *state);
-osspriteop_header* getEntitySprite(Entity *entity, GameState *state, int isPlayer, int entityIndex);
-void moveEntity(GameState *state, Entity *entity, Direction dir, int isPlayer);
+// Player-specific functions
+void initialisePlayerAnimState(void);
+void updatePlayerAnimationFrames(GameState *state);
+osspriteop_header* getPlayerSprite(Entity *player, GameState *state);
+void movePlayer(GameState *state, Entity *player, Direction dir);
 void updateLogicalPosition(Entity *entity);
-void updateMovementAnimation(GameState *state);
-int isEnemyInHoleAt(GameState *state, int x, int y);
-void applyGravity(GameState *state);
-void updateEnemies(GameState *state);
-int checkCollision(GameState *state);
+void updatePlayerMovementAnimation(GameState *state);
+void applyPlayerGravity(GameState *state);
 void dig(GameState *state, int dx);
 int findSafePosition(int x, int y, int *newX, int *newY);
 void updateHoleTimers(GameState *state);
