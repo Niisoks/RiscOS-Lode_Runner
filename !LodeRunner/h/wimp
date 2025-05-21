@@ -1,0 +1,28 @@
+#ifndef WIMP_H
+#define WIMP_H
+
+#include "oslib/wimp.h"
+#include "oslib/os.h"        
+#include "oslib/osfile.h"
+#include "oslib/osspriteop.h"                    
+#include "oslib/colourtrans.h"
+#include <stdlib.h>
+#include <string.h>
+#include "render.h"
+#include "main.h"
+
+extern wimp_w gameWindow;
+extern wimp_window *window;
+extern wimp_block *block;
+extern osspriteop_area *spriteArea;
+extern osspriteop_trans_tab *transTab;
+
+void updateModeInfo(void);
+osspriteop_area* loadSpriteFile(const char *filename);
+wimp_window* createWindow(void);
+void createWimpBlock(wimp_window* window);
+void redrawWindow(wimp_block *block);
+void updateWindow(wimp_w window);
+osbool update(wimp_event_no event, wimp_block* block);
+
+#endif

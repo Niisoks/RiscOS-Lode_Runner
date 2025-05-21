@@ -1,0 +1,24 @@
+#ifndef RENDER_H
+#define RENDER_H
+
+#include "oslib/wimp.h"
+#include "oslib/os.h"        
+#include "oslib/osfile.h"
+#include "oslib/osspriteop.h"                    
+#include "oslib/colourtrans.h"
+#include "entity.h"
+
+osspriteop_trans_tab *transTab;
+void render(wimp_draw *draw, osbool more);
+int isTightrope(int x, int y);
+int isWalkable(int x, int y, GameState *state);
+int isOnTightrope(int x, int y);
+int isClimbable(int x, int y);
+int isSolid(int x, int y);
+int isLadderTop(int x, int y);
+int supports(int x, int y, GameState *state);
+int isInHole(int x, int y);
+void checkForGold(GameState *state);
+void drawBlackSquaresOnScreen(void);
+
+#endif
