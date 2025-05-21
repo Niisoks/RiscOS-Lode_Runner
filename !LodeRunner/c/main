@@ -7,44 +7,35 @@
 char map[HEIGHT][WIDTH + 1];
 int currentLevel = 1;
 
-
 int loadMapFromFile(const char *filename) {
     FILE *file = fopen(filename, "r");
     if (!file) {
         return 0;
     }
-    
-    for (int y = 0; y < HEIGHT; y++) {
-        for (int x = 0; x < WIDTH; x++) {
-            map[y][x] = ' ';
-        }
-        map[y][WIDTH] = '\0';
-    }
-    
+
     char buffer[256];
     int y = 0;
-    
+
     while (y < HEIGHT && fgets(buffer, sizeof(buffer), file)) {
         char *newline = strchr(buffer, '\n');
         if (newline) *newline = '\0';
         newline = strchr(buffer, '\r');
         if (newline) *newline = '\0';
-        
+
         int len = strlen(buffer);
         int x;
-        
+
         for (x = 0; x < WIDTH && x < len; x++) {
             map[y][x] = buffer[x];
         }
-        
+
         y++;
     }
-    
+
     fclose(file);
-    
+
     return 1;
 }
-
 
 GameState gameState;
 os_t timer = 0;
@@ -96,6 +87,42 @@ void initialiseGame(GameState *state) {
     state->player.tileY = 7;
     state->player.visualX = 6.0f;
     state->player.visualY = 7.0f;
+
+    state->enemyCount = 0;
+
+    for (int y = 0; y < HEIGHT; y++) {
+        for (int x = 0; x < WIDTH; x++) {
+            if (map[y][x] == 'P') {
+
+                state->player.tileX = x;
+                state->player.tileY = y;
+                state->player.visualX = (float)x;
+                state->player.visualY = (float)y;
+
+                map[y][x] = ' ';
+            }
+            else if (map[y][x] == 'E' && state->enemyCount < 5) {
+
+                int enemyIndex = state->enemyCount;
+                state->enemies[enemyIndex].tileX = x;
+                state->enemies[enemyIndex].tileY = y;
+                state->enemies[enemyIndex].visualX = (float)x;
+                state->enemies[enemyIndex].visualY = (float)y;
+
+                map[y][x] = ' ';
+                state->enemyCount++;
+            }
+        }
+    }
+
+    if (state->enemyCount == 0) {
+        state->enemies[0].tileX = 15;
+        state->enemies[0].tileY = 7;
+        state->enemies[0].visualX = 15.0f;
+        state->enemies[0].visualY = 7.0f;
+        state->enemyCount = 1;
+    }
+
     state->player.targetX = state->player.visualX;
     state->player.targetY = state->player.visualY;
     state->player.isMoving = 0;
@@ -108,20 +135,15 @@ void initialiseGame(GameState *state) {
     state->player.prevVisualY = state->player.visualY;
     state->player.hasMoved = 0;
 
-    state->enemyCount = 1;
-    state->enemies[0].tileX = 15;
-    state->enemies[0].tileY = 7;
-    state->enemies[0].visualX = 15.0f;
-    state->enemies[0].visualY = 7.0f;
-    state->enemies[0].targetX = state->enemies[0].visualX;
-    state->enemies[0].targetY = state->enemies[0].visualY;
-    state->enemies[0].isMoving = 0;
-    state->enemies[0].moveDir = NEUTRAL;
-    state->enemies[0].inHole = 0;
-    state->enemies[0].isDigging = 0;  
-    state->enemies[0].digDirection = 0;
-    state->enemies[0].digTimer = 0;
     for (int i = 0; i < state->enemyCount; i++) {
+        state->enemies[i].targetX = state->enemies[i].visualX;
+        state->enemies[i].targetY = state->enemies[i].visualY;
+        state->enemies[i].isMoving = 0;
+        state->enemies[i].moveDir = NEUTRAL;
+        state->enemies[i].inHole = 0;
+        state->enemies[i].isDigging = 0;  
+        state->enemies[i].digDirection = 0;
+        state->enemies[i].digTimer = 0;
         state->enemies[i].prevVisualX = state->enemies[i].visualX;
         state->enemies[i].prevVisualY = state->enemies[i].visualY;
         state->enemies[i].hasMoved = 0;
@@ -154,7 +176,7 @@ void processKeyPress(int keyCode, GameState *state) {
             return;
         }
     }
-    
+
     switch (keyCode) {
         case wimp_KEY_LEFT:
             keyPressedThisFrame[0] = 1;
@@ -221,7 +243,7 @@ void updateGame(void *ws) {
         state->player.digTimer--;
         if (state->player.digTimer <= 0) {
             state->player.isDigging = 0;
-            
+
             if (keyState[0]) {
                 moveEntity(state, &state->player, LEFT, 1);
             } else if (keyState[1]) {
@@ -238,7 +260,7 @@ void updateGame(void *ws) {
     if (!state->player.isMoving) {
         applyGravity(state);
     }
-    updateEnemyAI(state);  // Use the new enemy AI function
+    updateEnemyAI(state);  
     updateHoleTimers(state);
     checkForGold(state);
 
@@ -250,11 +272,11 @@ void updateGame(void *ws) {
     xwimp_get_window_info_header_only(&window_info);
     strncpy(window_info.title_data.text, statusText, 31);
 
-    if (checkCollision(state)) {  // Uses the new collision check function
+    if (checkCollision(state)) {  
         state->gameOver = 1;
         strncpy(window_info.title_data.text, "Game Over! Press any number key to restart", 42);
     }
-    
+
     if (state->goldCollected >= state->goldTotal) {
         sprintf(window_info.title_data.text, "Level %d Complete! Press a number for next level", currentLevel);
     }
@@ -267,33 +289,44 @@ void updateGame(void *ws) {
 void loadLevel(int level) {
     char filename[256];
     currentLevel = level;
-    
+
     sprintf(filename, "<LodeRunner$Dir>.maps.level%d", level);
-    
-    if (!loadMapFromFile(filename)) {
+
+    drawBlackSquaresOnScreen();
+
+    for (int y = 0; y < HEIGHT; y++) {
+        for (int x = 0; x < WIDTH; x++) {
+            map[y][x] = ' ';
+        }
+        map[y][WIDTH] = '\0';
+    }
+
+    int mapLoaded = loadMapFromFile(filename);
+
+    if (!mapLoaded) {
         const char* defaultMap[] = {
             "####################",
-            "#   G    H   G     #",
+            "#P  G    H   G     #",
             "#  H###H###H#####  #",
             "#  H#  H  #H       #",
             "#  H# #H# #H  ######",
             "#  H# #H# #H    G  #",
             "# #H# #H# #####H#  #",
             "#  H   H#---G  H   #",
-            "#  H   H     H######",
+            "#  H   H     HE#####",
             "#  H   H-----H#    #",
             "#  H --H           #",
             "#  H   H    ##H    #",
             "#  H   H      H    #",
             "GGGGGGGGGGGGGGGGGGGG"
         };
-        
+
         for (int y = 0; y < HEIGHT && y < 14; y++) {
             strncpy(map[y], defaultMap[y], WIDTH);
             map[y][WIDTH] = '\0';
         }
     }
-    
+
     initialiseGame(&gameState);
 }
 

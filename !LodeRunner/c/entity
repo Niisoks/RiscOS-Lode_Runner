@@ -266,7 +266,7 @@ void updatePlayerMovementAnimation(GameState *state) {
             player->prevVisualY = player->visualY;
             player->hasMoved = 1;
             
-            player->visualX += dx * state->pixelSpeed;
+            player->visualX += dx * state->pixelSpeed * 1.3;
             player->visualY += dy * state->pixelSpeed;
         }
 

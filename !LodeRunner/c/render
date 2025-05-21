@@ -1,5 +1,8 @@
 #include "render.h"
 #include "entity.h"
+#include "wimp.h"
+
+int drawingBlackSquares = 0;
 
 void render(wimp_draw *draw, osbool more) {
     int x, y, i;
@@ -9,23 +12,14 @@ void render(wimp_draw *draw, osbool more) {
         int baseX = draw->box.x0 - draw->xscroll;
         int baseY = draw->box.y1 - draw->yscroll - TILE_SIZE;
 
-        for (y = 0; y < HEIGHT; y++) {
-            for (x = 0; x < WIDTH; x++) {
-                int screenX = baseX + (x * TILE_SIZE);
-                int screenY = baseY - (y * TILE_SIZE);
-                osspriteop_header *sprite = NULL;
+        if (drawingBlackSquares) {
+            for (y = 0; y < HEIGHT; y++) {
+                for (x = 0; x < WIDTH; x++) {
+                    int screenX = baseX + (x * TILE_SIZE);
+                    int screenY = baseY - (y * TILE_SIZE);
 
-                switch (map[y][x]) {
-                    case '#': sprite = wallSprite; break;
-                    case 'H': sprite = ladderSprite; break;
-                    case 'G': sprite = goldSprite; break;
-                    case '.': sprite = holeSprite; break;
-                    case '-': sprite = tightropeSprite; break;
-                }
-
-                if (sprite != NULL) {
                     xosspriteop_put_sprite_scaled(
-                        osspriteop_PTR, spriteArea, (osspriteop_id)sprite,
+                        osspriteop_PTR, spriteArea, (osspriteop_id)blackSquareSprite,
                         screenX, screenY, 
                         os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES | osspriteop_USE_MASK,
                         &factors, transTab
@@ -33,70 +27,105 @@ void render(wimp_draw *draw, osbool more) {
                 }
             }
         }
-        
-        // Draw black square at player's previous position if moved
-        Entity *player = &state->player;
-        if (player->hasMoved) {
-            int prevScreenX = baseX + (int)(player->prevVisualX * TILE_SIZE);
-            int prevScreenY = baseY - (int)(player->prevVisualY * TILE_SIZE);
-            
-            xosspriteop_put_sprite_scaled(
-                osspriteop_PTR, spriteArea, (osspriteop_id)blackSquareSprite,
-                prevScreenX, prevScreenY,
-                os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES | osspriteop_USE_MASK,
-                &factors, transTab
-            );
-            
-            player->hasMoved = 0;
-        }
-        
-        // Draw black squares at enemies' previous positions
-        for (i = 0; i < state->enemyCount; i++) {
-            Entity *enemy = &state->enemies[i];
-            if (enemy->hasMoved) {
-                int prevScreenX = baseX + (int)(enemy->prevVisualX * TILE_SIZE);
-                int prevScreenY = baseY - (int)(enemy->prevVisualY * TILE_SIZE);
-                
+
+        else {
+
+            for (y = 0; y < HEIGHT; y++) {
+                for (x = 0; x < WIDTH; x++) {
+                    int screenX = baseX + (x * TILE_SIZE);
+                    int screenY = baseY - (y * TILE_SIZE);
+                    osspriteop_header *sprite = NULL;
+
+                    switch (map[y][x]) {
+                        case '#': sprite = wallSprite; break;
+                        case 'H': sprite = ladderSprite; break;
+                        case 'G': sprite = goldSprite; break;
+                        case '.': sprite = holeSprite; break;
+                        case '-': sprite = tightropeSprite; break;
+                        case 'P':
+                        case 'E':
+                            map[y][x] = ' '; 
+                            break;
+                    }
+
+                    if (sprite != NULL) {
+                        xosspriteop_put_sprite_scaled(
+                            osspriteop_PTR, spriteArea, (osspriteop_id)sprite,
+                            screenX, screenY, 
+                            os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES | osspriteop_USE_MASK,
+                            &factors, transTab
+                        );
+                    }
+                }
+            }
+
+            Entity *player = &state->player;
+            if (player->hasMoved) {
+                int prevScreenX = baseX + (int)(player->prevVisualX * TILE_SIZE);
+                int prevScreenY = baseY - (int)(player->prevVisualY * TILE_SIZE);
+
                 xosspriteop_put_sprite_scaled(
                     osspriteop_PTR, spriteArea, (osspriteop_id)blackSquareSprite,
                     prevScreenX, prevScreenY,
                     os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES | osspriteop_USE_MASK,
                     &factors, transTab
                 );
-                
-                enemy->hasMoved = 0;
+
+                player->hasMoved = 0;
             }
-        }
 
-        int playerScreenX = baseX + (int)(player->visualX * TILE_SIZE);
-        int playerScreenY = baseY - (int)(player->visualY * TILE_SIZE);
-        osspriteop_header *playerSprite = getEntitySprite(player, state, 1, 0); 
+            for (i = 0; i < state->enemyCount; i++) {
+                Entity *enemy = &state->enemies[i];
+                if (enemy->hasMoved) {
+                    int prevScreenX = baseX + (int)(enemy->prevVisualX * TILE_SIZE);
+                    int prevScreenY = baseY - (int)(enemy->prevVisualY * TILE_SIZE);
 
-        if (playerSprite != NULL) {
+                    xosspriteop_put_sprite_scaled(
+                        osspriteop_PTR, spriteArea, (osspriteop_id)blackSquareSprite,
+                        prevScreenX, prevScreenY,
+                        os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES | osspriteop_USE_MASK,
+                        &factors, transTab
+                    );
+
+                    enemy->hasMoved = 0;
+                }
+            }
+
+            int playerScreenX = baseX + (int)(player->visualX * TILE_SIZE);
+            int playerScreenY = baseY - (int)(player->visualY * TILE_SIZE);
+
             xosspriteop_put_sprite_scaled(
-                osspriteop_PTR, spriteArea, (osspriteop_id)playerSprite,
+                osspriteop_PTR, spriteArea, (osspriteop_id)getEntitySprite(player, state, 1, 0) ,
                 playerScreenX, playerScreenY,
                 os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES | osspriteop_USE_MASK,
                 &factors, transTab
             );
-        }
 
-        for (i = 0; i < state->enemyCount; i++) {
-            Entity *enemy = &state->enemies[i];
-            int enemyScreenX = baseX + (int)(enemy->visualX * TILE_SIZE);
-            int enemyScreenY = baseY - (int)(enemy->visualY * TILE_SIZE);
-            osspriteop_header *enemySprite = getEntitySprite(enemy, state, 0, i);
+            for (i = 0; i < state->enemyCount; i++) {
+                Entity *enemy = &state->enemies[i];
+                int enemyScreenX = baseX + (int)(enemy->visualX * TILE_SIZE);
+                int enemyScreenY = baseY - (int)(enemy->visualY * TILE_SIZE);
 
-            xosspriteop_put_sprite_scaled(
-                osspriteop_PTR, spriteArea, (osspriteop_id)enemySprite,
-                enemyScreenX, enemyScreenY,
-                os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES | osspriteop_USE_MASK,
-                &factors, transTab
-            );
+                xosspriteop_put_sprite_scaled(
+                    osspriteop_PTR, spriteArea, (osspriteop_id)getEntitySprite(enemy, state, 0, i),
+                    enemyScreenX, enemyScreenY,
+                    os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES | osspriteop_USE_MASK,
+                    &factors, transTab
+                );
+            }
         }
 
         xwimp_get_rectangle(draw, &more);
     }
+}
+
+void drawBlackSquaresOnScreen(void) {
+
+    drawingBlackSquares = 1;
+
+    updateWindow(gameWindow);
+
+    drawingBlackSquares = 0;
 }
 
 int isTightrope(int x, int y) {

@@ -19,5 +19,6 @@ int isLadderTop(int x, int y);
 int supports(int x, int y, GameState *state);
 int isInHole(int x, int y);
 void checkForGold(GameState *state);
+void drawBlackSquaresOnScreen(void);
 
 #endif

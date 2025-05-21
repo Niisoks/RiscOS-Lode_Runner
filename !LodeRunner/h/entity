@@ -83,7 +83,8 @@ extern os_factors factors;
 extern osspriteop_area *spriteArea;
 extern osspriteop_header *blackSquareSprite;
 
-// Player-specific functions
+osspriteop_header* getEntitySprite(Entity *entity, GameState *state, int isPlayer, int entityIndex);
+
 void initialisePlayerAnimState(void);
 void updatePlayerAnimationFrames(GameState *state);
 osspriteop_header* getPlayerSprite(Entity *player, GameState *state);
@@ -94,5 +95,12 @@ void applyPlayerGravity(GameState *state);
 void dig(GameState *state, int dx);
 int findSafePosition(int x, int y, int *newX, int *newY);
 void updateHoleTimers(GameState *state);
+void initialiseAnimStates(void);
+void moveEntity(GameState *state, Entity *entity, Direction dir, int isPlayer);
+void updateMovementAnimation(GameState *state);
+void updateAnimationFrames(GameState *state);
+void applyGravity(GameState *state);
+int checkCollision(GameState *state);
+
 
 #endif
