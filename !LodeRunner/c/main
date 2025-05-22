@@ -3,6 +3,7 @@
 #include "render.h"
 #include "wimp.h"
 #include "enemy.h"
+#include "text.h"
 
 char map[HEIGHT][WIDTH + 1];
 int currentLevel = 1;
@@ -239,6 +240,13 @@ void updateGame(void *ws) {
 
     state->frame++;
 
+    if (showCenteredMessage) {
+        if (--centeredMessageTimer <= 0) {
+            showCenteredMessage = 0;
+            centeredMessage[0] = '\0';
+        }
+    }
+
     if (state->player.isDigging) {
         state->player.digTimer--;
         if (state->player.digTimer <= 0) {
@@ -264,21 +272,15 @@ void updateGame(void *ws) {
     updateHoleTimers(state);
     checkForGold(state);
 
-    char statusText[48];
-    sprintf(statusText, "Level: %d  Gold: %d/%d", currentLevel, state->goldCollected, state->goldTotal);
-
-    wimp_window_info window_info;
-    window_info.w = gameWindow;
-    xwimp_get_window_info_header_only(&window_info);
-    strncpy(window_info.title_data.text, statusText, 31);
-
     if (checkCollision(state)) {  
         state->gameOver = 1;
-        strncpy(window_info.title_data.text, "Game Over! Press any number key to restart", 42);
+
+        setCenteredMessage("game over.\npress any number key to restart");
     }
 
     if (state->goldCollected >= state->goldTotal) {
-        sprintf(window_info.title_data.text, "Level %d Complete! Press a number for next level", currentLevel);
+
+        setCenteredMessage("level %d complete.\n press a number for next level", currentLevel);
     }
 
     updateWindow(gameWindow);
@@ -335,6 +337,8 @@ int main(void) {
 
     updateModeInfo();
     spriteArea = loadSpriteFile("<LodeRunner$Dir>.sprites");
+
+    initialiseText();
 
     loadLevel(1);
 

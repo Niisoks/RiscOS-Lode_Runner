@@ -18,7 +18,7 @@ typedef enum {
 
 #define GAME_SIZE 2
 #define WIDTH 20
-#define HEIGHT 20
+#define HEIGHT 15
 #define TILE_SIZE (32 * GAME_SIZE)
 #define HOLE_REGENERATION_TIME 300
 #define WALL_PADDING 0.0f

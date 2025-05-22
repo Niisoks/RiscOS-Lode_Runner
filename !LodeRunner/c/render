@@ -1,6 +1,7 @@
 #include "render.h"
 #include "entity.h"
 #include "wimp.h"
+#include "text.h"
 
 int drawingBlackSquares = 0;
 
@@ -112,6 +113,12 @@ void render(wimp_draw *draw, osbool more) {
                     os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES | osspriteop_USE_MASK,
                     &factors, transTab
                 );
+            }
+
+            renderGameStats(state, baseX, baseY);
+            renderDebugText(baseX, baseY);
+            if (showCenteredMessage) {
+                renderCenteredMessage(centeredMessage, baseX, baseY);
             }
         }
 

@@ -3,7 +3,7 @@ CFLAGS = -mlibscl -IOSLib: -std=c99 -Wall -Wextra -pedantic
 LD = gcc
 LDFLAGS = -mlibscl
 LIBS = -LOSLib: -lOSLib32
-OBJS = main.o entity.o wimp.o render.o enemy.o
+OBJS = main.o entity.o wimp.o render.o enemy.o text.o
 RM = delete
 
 application: $(OBJS)
@@ -15,13 +15,11 @@ application: $(OBJS)
 
 clean:
 	$(RM) o.main
-
 	$(RM) o.render
-
 	$(RM) o.entity 
-
 	$(RM) o.wimp
 	$(RM) o.enemy
+	$(RM) o.text
 
 #	$(RM) $(OBJS)
 #	$(RM) application
