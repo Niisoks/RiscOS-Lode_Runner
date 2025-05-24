@@ -48,6 +48,7 @@ void render(wimp_draw *draw, osbool more) {
                         case 'G': sprite = goldSprite; break;
                         case '.': sprite = holeSprite; break;
                         case '-': sprite = tightropeSprite; break;
+                        case 'S': sprite = stoneSprite; break;
                         case 'P':
                         case 'E':
                             map[y][x] = ' '; 
@@ -180,7 +181,7 @@ int isSolid(int x, int y) {
     if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT)
         return 0;
 
-    return (map[y][x] == '#' || map[y][x] == 'G');
+    return (map[y][x] == '#' || map[y][x] == 'G' || map[y][x] == 'S');
 }
 
 int isLadderTop(int x, int y) {

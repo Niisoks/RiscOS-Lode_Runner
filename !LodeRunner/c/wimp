@@ -22,6 +22,7 @@ osspriteop_header *enemyFallSprite1, *enemyFallSprite2;
 osspriteop_header *enemyRopeSprite1, *enemyRopeSprite2, *enemyRopeSprite3, *enemyRopeSprite4;
 osspriteop_header *wallSprite, *ladderSprite, *goldSprite, *holeSprite, *tightropeSprite;
 osspriteop_header *blackSquareSprite;
+osspriteop_header *stoneSprite;
 os_factors factors;
 osspriteop_trans_tab *transTab;
 
@@ -59,16 +60,15 @@ osspriteop_area* loadSpriteFile(const char *filename) {
 
     xosspriteop_load_sprite_file(osspriteop_USER_AREA, area, filename);
 
-    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runner1", &playerSprite1);
-    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runner2", &playerSprite2);
-    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemy1", &enemySprite1);
-    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemy2", &enemySprite2);
     xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"wall", &wallSprite);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"stone", &stoneSprite);
     xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"ladder", &ladderSprite);
     xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"gold", &goldSprite);
     xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"hole", &holeSprite);
     xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"tightrope", &tightropeSprite);
 
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runner1", &playerSprite1);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runner2", &playerSprite2);
     xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runner3", &playerSprite3);
     xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runner4", &playerSprite4);
     xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runnerclimb1", &playerClimbSprite1);
@@ -84,6 +84,8 @@ osspriteop_area* loadSpriteFile(const char *filename) {
     xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runnerrope3", &playerRopeSprite3);
     xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"runnerrope4", &playerRopeSprite4);
 
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemy1", &enemySprite1);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemy2", &enemySprite2);
     xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemy3", &enemySprite3);
     xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemy4", &enemySprite4);
     xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"enemyclimb1", &enemyClimbSprite1);

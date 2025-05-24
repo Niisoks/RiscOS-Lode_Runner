@@ -218,7 +218,7 @@ void updateEnemyMovementAnimation(GameState *state) {
             enemy->prevVisualY = enemy->visualY;
             enemy->hasMoved = 1;
 
-            enemy->visualX += dx * state->pixelSpeed;
+            enemy->visualX += dx * state->pixelSpeed * 0.7f;
             enemy->visualY += dy * state->pixelSpeed;
         }
 

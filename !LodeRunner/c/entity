@@ -325,7 +325,9 @@ void dig(GameState *state, int dx) {
     int x = player->tileX + dx;
     int y = player->tileY + 1;
 
-    if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT && map[y][x] == '#') {
+    if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT && 
+        map[y][x] == '#') {
+        
         map[y][x] = '.';
         holeTimer[y][x] = os_read_monotonic_time();
         dug[y][x] = 1;
@@ -335,6 +337,7 @@ void dig(GameState *state, int dx) {
         player->digTimer = 20; 
     }
 }
+
 
 int findSafePosition(int x, int y, int *newX, int *newY) {
     int dx[] = {0, -1, 1, 0, -1, -1, 1, 1};

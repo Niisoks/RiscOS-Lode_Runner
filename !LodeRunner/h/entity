@@ -82,6 +82,7 @@ extern osspriteop_header *wallSprite, *ladderSprite, *goldSprite, *holeSprite, *
 extern os_factors factors;
 extern osspriteop_area *spriteArea;
 extern osspriteop_header *blackSquareSprite;
+extern osspriteop_header *stoneSprite;
 
 int getGameSize(void);
 

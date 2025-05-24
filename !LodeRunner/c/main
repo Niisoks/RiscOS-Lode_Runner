@@ -293,7 +293,6 @@ void updateGame(void *ws) {
     }
 
     if (state->goldCollected >= state->goldTotal) {
-        setCenteredMessage("level complete!\nreturning to menu...");
         setTimer(120, (void(*)(void*))showMenu, NULL);  
         return;
     }
