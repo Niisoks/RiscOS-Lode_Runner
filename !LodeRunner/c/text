@@ -6,6 +6,7 @@
 #include "text.h"
 #include "wimp.h"
 #include "main.h"
+#include "config.h"
 
 osspriteop_header *letterSprites[26];
 osspriteop_header *numberSprites[10];
@@ -130,6 +131,7 @@ void renderText(const char *text, int x, int y) {
 
     int currentX = x;
     int len = strlen(text);
+    int currentGameSize = getGameSize();
 
     for (int i = 0; i < len; i++) {
         osspriteop_header *sprite = getCharSprite(text[i]);
@@ -142,16 +144,17 @@ void renderText(const char *text, int x, int y) {
                 &factors, transTab);
         }
 
-        currentX += CHAR_WIDTH * GAME_SIZE;
+        currentX += CHAR_WIDTH * currentGameSize;
     }
 }
 
 int renderTextCentered(const char *text, int baseX, int y) {
-    if (!text) return;
+    if (!text) return 0;
 
-    int textWidth = strlen(text) * CHAR_WIDTH * GAME_SIZE;
+    int currentGameSize = getGameSize();
+    int textWidth = strlen(text) * CHAR_WIDTH * currentGameSize;
 
-    int gameAreaWidth = WIDTH * TILE_SIZE;
+    int gameAreaWidth = WIDTH * (32 * currentGameSize);
     int centerOffset = (gameAreaWidth - textWidth) / 2;
 
     int x = baseX + centerOffset;
@@ -164,7 +167,8 @@ void renderTextCenteredMultiLine(const char *text, int baseX, int y) {
     if (!text) return;
     
     int currentY = y;
-    int lineHeight = CHAR_HEIGHT * GAME_SIZE + 4;
+    int currentGameSize = getGameSize();
+    int lineHeight = CHAR_HEIGHT * currentGameSize + 4;
     
     char textCopy[256];
     strncpy(textCopy, text, sizeof(textCopy) - 1);
@@ -179,12 +183,14 @@ void renderTextCenteredMultiLine(const char *text, int baseX, int y) {
 }
 
 void renderDebugText(int baseX, int baseY) {
-    int startY = baseY - TILE_SIZE;
+    int currentGameSize = getGameSize();
+    int tileSize = 32 * currentGameSize;
+    int startY = baseY - tileSize;
 
     for (int i = 0; i < MAX_DEBUG_LINES; i++) {
         int lineIndex = (currentDebugLine + i) % MAX_DEBUG_LINES;
         if (debugLines[lineIndex][0] != '\0') {
-            int lineSpacing = CHAR_HEIGHT * GAME_SIZE + 4;
+            int lineSpacing = CHAR_HEIGHT * currentGameSize + 4;
             renderText(debugLines[lineIndex], baseX + 8,
                        startY - (i * lineSpacing));
         }
@@ -192,10 +198,12 @@ void renderDebugText(int baseX, int baseY) {
 }
 
 void renderGameStats(GameState *state, int baseX, int baseY) {
-    int statsY = baseY - (HEIGHT * TILE_SIZE) + TILE_SIZE;
+    int currentGameSize = getGameSize();
+    int tileSize = 32 * currentGameSize;
+    int statsY = baseY - (HEIGHT * tileSize) + tileSize;
     char statsText[MAX_DEBUG_LENGTH];
-    sprintf(statsText, "level:%s  gold:%d/%d", currentLevelName,
-            state->goldCollected, state->goldTotal);
+    sprintf(statsText, "level:%s  gold:%d/%d  size:%dx", currentLevelName,
+            state->goldCollected, state->goldTotal, currentGameSize);
 
     renderTextCenteredMultiLine(statsText, baseX, statsY);
 }
@@ -203,7 +211,9 @@ void renderGameStats(GameState *state, int baseX, int baseY) {
 void renderCenteredMessage(const char *message, int baseX, int baseY) {
     if (!message || !message[0]) return;
 
-    int messageY = baseY - ((HEIGHT / 2) * TILE_SIZE);
+    int currentGameSize = getGameSize();
+    int tileSize = 32 * currentGameSize;
+    int messageY = baseY - ((HEIGHT / 2) * tileSize);
 
     renderTextCenteredMultiLine(message, baseX, messageY);
 }

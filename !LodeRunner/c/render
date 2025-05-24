@@ -3,22 +3,25 @@
 #include "wimp.h"
 #include "text.h"
 #include "menu.h"
+#include "config.h"
 
 int drawingBlackSquares = 0;
 
 void render(wimp_draw *draw, osbool more) {
     int x, y, i;
     GameState *state = &gameState;
+    int currentGameSize = getGameSize();
+    int tileSize = 32 * currentGameSize;
 
     while (more) {
         int baseX = draw->box.x0 - draw->xscroll;
-        int baseY = draw->box.y1 - draw->yscroll - TILE_SIZE;
+        int baseY = draw->box.y1 - draw->yscroll - tileSize;
 
         if (drawingBlackSquares) {
             for (y = 0; y < HEIGHT; y++) {
                 for (x = 0; x < WIDTH; x++) {
-                    int screenX = baseX + (x * TILE_SIZE);
-                    int screenY = baseY - (y * TILE_SIZE);
+                    int screenX = baseX + (x * tileSize);
+                    int screenY = baseY - (y * tileSize);
 
                     xosspriteop_put_sprite_scaled(
                         osspriteop_PTR, spriteArea, (osspriteop_id)blackSquareSprite,
@@ -30,15 +33,13 @@ void render(wimp_draw *draw, osbool more) {
             }
         }
         else if (isMenuActive()) {
-            // Render menu
             renderMenu(baseX, baseY);
         }
         else {
-            // Render game normally
             for (y = 0; y < HEIGHT; y++) {
                 for (x = 0; x < WIDTH; x++) {
-                    int screenX = baseX + (x * TILE_SIZE);
-                    int screenY = baseY - (y * TILE_SIZE);
+                    int screenX = baseX + (x * tileSize);
+                    int screenY = baseY - (y * tileSize);
                     osspriteop_header *sprite = NULL;
 
                     switch (map[y][x]) {
@@ -66,8 +67,8 @@ void render(wimp_draw *draw, osbool more) {
 
             Entity *player = &state->player;
             if (player->hasMoved) {
-                int prevScreenX = baseX + (int)(player->prevVisualX * TILE_SIZE);
-                int prevScreenY = baseY - (int)(player->prevVisualY * TILE_SIZE);
+                int prevScreenX = baseX + (int)(player->prevVisualX * tileSize);
+                int prevScreenY = baseY - (int)(player->prevVisualY * tileSize);
 
                 xosspriteop_put_sprite_scaled(
                     osspriteop_PTR, spriteArea, (osspriteop_id)blackSquareSprite,
@@ -82,8 +83,8 @@ void render(wimp_draw *draw, osbool more) {
             for (i = 0; i < state->enemyCount; i++) {
                 Entity *enemy = &state->enemies[i];
                 if (enemy->hasMoved) {
-                    int prevScreenX = baseX + (int)(enemy->prevVisualX * TILE_SIZE);
-                    int prevScreenY = baseY - (int)(enemy->prevVisualY * TILE_SIZE);
+                    int prevScreenX = baseX + (int)(enemy->prevVisualX * tileSize);
+                    int prevScreenY = baseY - (int)(enemy->prevVisualY * tileSize);
 
                     xosspriteop_put_sprite_scaled(
                         osspriteop_PTR, spriteArea, (osspriteop_id)blackSquareSprite,
@@ -96,8 +97,8 @@ void render(wimp_draw *draw, osbool more) {
                 }
             }
 
-            int playerScreenX = baseX + (int)(player->visualX * TILE_SIZE);
-            int playerScreenY = baseY - (int)(player->visualY * TILE_SIZE);
+            int playerScreenX = baseX + (int)(player->visualX * tileSize);
+            int playerScreenY = baseY - (int)(player->visualY * tileSize);
 
             xosspriteop_put_sprite_scaled(
                 osspriteop_PTR, spriteArea, (osspriteop_id)getEntitySprite(player, state, 1, 0) ,
@@ -108,8 +109,8 @@ void render(wimp_draw *draw, osbool more) {
 
             for (i = 0; i < state->enemyCount; i++) {
                 Entity *enemy = &state->enemies[i];
-                int enemyScreenX = baseX + (int)(enemy->visualX * TILE_SIZE);
-                int enemyScreenY = baseY - (int)(enemy->visualY * TILE_SIZE);
+                int enemyScreenX = baseX + (int)(enemy->visualX * tileSize);
+                int enemyScreenY = baseY - (int)(enemy->visualY * tileSize);
 
                 xosspriteop_put_sprite_scaled(
                     osspriteop_PTR, spriteArea, (osspriteop_id)getEntitySprite(enemy, state, 0, i),

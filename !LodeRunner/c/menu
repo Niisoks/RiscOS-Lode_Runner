@@ -2,6 +2,7 @@
 #include "text.h"
 #include "main.h"
 #include "wimp.h"
+#include "config.h"
 #include "oslib/osfile.h"
 #include "oslib/os.h"
 #include "oslib/colourtrans.h"
@@ -69,7 +70,7 @@ void renderMenu(int baseX, int baseY) {
         return;
     }
 
-    for (int y = 0; y < HEIGHT; y++) {
+    for (int y = 0; y < HEIGHT + 1; y++) {
         for (int x = 0; x < WIDTH; x++) {
             int screenX = baseX + (x * TILE_SIZE);
             int screenY = baseY - (y * TILE_SIZE);
@@ -113,7 +114,7 @@ void renderMenu(int baseX, int baseY) {
     
     for (int i = startLevel; i < endLevel; i++) {
         int listIndex = i - startLevel;
-        int itemY = listStartY - (listIndex * 48);
+        int itemY = listStartY - (listIndex * (TILE_SIZE));
         int textX = baseX;
         int selectorX = renderTextCentered(menuState.levels[i].displayName, textX, itemY);
         if (listIndex == menuState.selectedIndex) {
@@ -127,9 +128,14 @@ void renderMenu(int baseX, int baseY) {
         }
     }
 
-    int instructY = menuCenterY - (TILE_SIZE * 3);
+    int instructY = menuCenterY - (TILE_SIZE * 5);
     renderTextCentered("up/down: select z: play", baseX, instructY);
-    renderTextCentered("left/right: page", baseX, (instructY - TILE_SIZE));
+    renderTextCentered("left/right: page", baseX, (instructY - TILE_SIZE / 2));
+    
+    char sizeInfo[64];
+    sprintf(sizeInfo, "current size: %dx", getGameSize());
+    renderTextCentered(sizeInfo, baseX, (instructY - TILE_SIZE));
+    renderTextCentered("1/2/3: change size and exit", baseX, (instructY - (TILE_SIZE * 3) / 2));
     
     if (menuState.levelCount == 0) {
         renderTextCentered("no levels found", baseX, listStartY);
@@ -139,6 +145,21 @@ void renderMenu(int baseX, int baseY) {
 void processMenuInput(int keyCode) {
     if (!menuState.isActive) {
         return;
+    }
+    
+    switch (keyCode) {
+        case '1':
+            setGameSize(1);
+            exitGame();
+            return;
+        case '2':
+            setGameSize(2);
+            exitGame();
+            return;
+        case '3':
+            setGameSize(3);
+            exitGame();
+            return;
     }
     
     if (menuState.levelCount == 0) {

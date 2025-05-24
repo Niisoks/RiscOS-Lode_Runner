@@ -1,0 +1,16 @@
+#ifndef CONFIG_H
+#define CONFIG_H
+
+#include <stdio.h>
+
+#define CONFIG_FILE_PATH "<LodeRunner$Dir>.config"
+#define DEFAULT_GAME_SIZE 2
+
+extern int currentGameSize;
+
+int loadConfig(void);
+int saveConfig(void);
+void setGameSize(int newSize);
+int getGameSize(void);
+
+#endif

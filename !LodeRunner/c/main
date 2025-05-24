@@ -5,6 +5,7 @@
 #include "enemy.h"
 #include "text.h"
 #include "menu.h"
+#include "config.h"
 
 char map[HEIGHT][WIDTH + 1];
 char currentLevelName[256] = "unknown";
@@ -203,8 +204,8 @@ void processKeyPress(int keyCode, GameState *state) {
             break;
         case 'q':
         case 'Q':
-            showMenu();
-            break;
+            setTimer(120, (void(*)(void*))showMenu, NULL);  
+            return;
     }
 }
 
@@ -288,7 +289,7 @@ void updateGame(void *ws) {
 
     if (checkCollision(state)) {  
         state->gameOver = 1;
-        setCenteredMessage("game over.\npress escape for menu");
+        setCenteredMessage("game over.\npress q for menu");
     }
 
     if (state->goldCollected >= state->goldTotal) {
@@ -300,6 +301,24 @@ void updateGame(void *ws) {
     updateWindow(gameWindow);
 
     setTimer(4, updateGame, ws);
+}
+
+void exitGame(void) {
+    if (block) {
+        free(block);
+        block = NULL;
+    }
+    if (window) {
+        free(window);
+        window = NULL;
+    }
+    if (spriteArea) {
+        free(spriteArea);
+        spriteArea = NULL;
+    }
+    
+    wimp_close_down(0);
+    exit(0);
 }
 
 void loadLevel(int level) {
@@ -358,6 +377,8 @@ void loadLevelFromPath(const char *levelPath) {
 }
 
 int main(void) {
+    loadConfig();
+    
     wimp_initialise(wimp_VERSION_RO3, "Lode Runner", NULL, NULL);
 
     updateModeInfo();

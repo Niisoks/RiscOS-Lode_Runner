@@ -9,7 +9,8 @@
     "enemy": "c",
     "cstdlib": "c",
     "menu": "c",
-    "stdlib.h": "c"
+    "stdlib.h": "c",
+    "config": "c"
   },
   "C_Cpp.errorSquiggles": "disabled",
   
