@@ -13,7 +13,7 @@
 
 void initialiseText(void);
 void renderText(const char *text, int x, int y);
-void renderTextCentered(const char *text, int baseX, int y);
+int renderTextCentered(const char *text, int baseX, int y);
 void renderTextCenteredMultiLine(const char *text, int baseX, int y);
 
 void debugPrint(const char *format, ...);

@@ -2,6 +2,7 @@
 #include "entity.h"
 #include "wimp.h"
 #include "text.h"
+#include "menu.h"
 
 int drawingBlackSquares = 0;
 
@@ -28,9 +29,12 @@ void render(wimp_draw *draw, osbool more) {
                 }
             }
         }
-
+        else if (isMenuActive()) {
+            // Render menu
+            renderMenu(baseX, baseY);
+        }
         else {
-
+            // Render game normally
             for (y = 0; y < HEIGHT; y++) {
                 for (x = 0; x < WIDTH; x++) {
                     int screenX = baseX + (x * TILE_SIZE);

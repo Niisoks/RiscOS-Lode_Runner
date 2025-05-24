@@ -106,25 +106,18 @@ osspriteop_area* loadSpriteFile(const char *filename) {
     return area;
 }
 
-// Modify your createWindow function in wimp.c to include text area
-
-// Modify your createWindow function in wimp.c to include text area
-// Modify your createWindow function in wimp.c to include text area
-
 wimp_window* createWindow(void) {
     wimp_window* window = (wimp_window*)malloc(sizeof(wimp_window));
 
-    // Calculate the actual game area size
     int gameAreaWidth = WIDTH * TILE_SIZE;
     int gameAreaHeight = HEIGHT * TILE_SIZE;
     
-    // Add exactly 24 pixels below the game area for stats
     int statsAreaHeight = 24;
     
     window->visible.x0 = 0;
     window->visible.y0 = 0;
     window->visible.x1 = gameAreaWidth;
-    window->visible.y1 = gameAreaHeight + statsAreaHeight; // Game area plus stats area
+    window->visible.y1 = gameAreaHeight + statsAreaHeight;
     window->xscroll = 0;
     window->yscroll = 0;
     window->next = wimp_TOP;
@@ -146,7 +139,6 @@ wimp_window* createWindow(void) {
     window->scroll_inner = wimp_COLOUR_VERY_LIGHT_GREY;
     window->highlight_bg = wimp_COLOUR_CREAM;
 
-    // Set the extent to match the window size exactly
     window->extent.x0 = 0;
     window->extent.y0 = -(gameAreaHeight + statsAreaHeight);
     window->extent.x1 = gameAreaWidth;

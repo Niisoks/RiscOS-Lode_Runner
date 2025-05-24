@@ -4,9 +4,10 @@
 #include "wimp.h"
 #include "enemy.h"
 #include "text.h"
+#include "menu.h"
 
 char map[HEIGHT][WIDTH + 1];
-int currentLevel = 1;
+char currentLevelName[256] = "unknown";
 
 int loadMapFromFile(const char *filename) {
     FILE *file = fopen(filename, "r");
@@ -170,12 +171,9 @@ void initialiseGame(GameState *state) {
 }
 
 void processKeyPress(int keyCode, GameState *state) {
-    if (keyCode >= '1' && keyCode <= '9') {
-        int level = keyCode - '0';
-        if (level != currentLevel) {
-            loadLevel(level);
-            return;
-        }
+    if (isMenuActive()) {
+        processMenuInput(keyCode);
+        return;
     }
 
     switch (keyCode) {
@@ -203,10 +201,18 @@ void processKeyPress(int keyCode, GameState *state) {
         case 'X':
             dig(state, 1);
             break;
+        case 'q':
+        case 'Q':
+            showMenu();
+            break;
     }
 }
 
 void trackKeyStates(GameState *state) {
+    if (isMenuActive()) {
+        return;
+    }
+
     Entity *player = &state->player;
 
     if (keyState[0] && !keyPressedThisFrame[0]) {
@@ -232,7 +238,15 @@ void trackKeyStates(GameState *state) {
 void updateGame(void *ws) {
     GameState *state = (GameState *)ws;
 
+    if (isMenuActive()) {
+        updateWindow(gameWindow);
+        setTimer(4, updateGame, ws);
+        return;
+    }
+
     if (state->gameOver) {
+        updateWindow(gameWindow);
+        setTimer(4, updateGame, ws);
         return;
     }
 
@@ -274,13 +288,13 @@ void updateGame(void *ws) {
 
     if (checkCollision(state)) {  
         state->gameOver = 1;
-
-        setCenteredMessage("game over.\npress any number key to restart");
+        setCenteredMessage("game over.\npress escape for menu");
     }
 
     if (state->goldCollected >= state->goldTotal) {
-
-        setCenteredMessage("level %d complete.\n press a number for next level", currentLevel);
+        setCenteredMessage("level complete!\nreturning to menu...");
+        setTimer(120, (void(*)(void*))showMenu, NULL);  
+        return;
     }
 
     updateWindow(gameWindow);
@@ -290,11 +304,21 @@ void updateGame(void *ws) {
 
 void loadLevel(int level) {
     char filename[256];
-    currentLevel = level;
-
     sprintf(filename, "<LodeRunner$Dir>.maps.level%d", level);
+    loadLevelFromPath(filename);
+}
 
+void loadLevelFromPath(const char *levelPath) {
     drawBlackSquaresOnScreen();
+
+    const char *filename = strrchr(levelPath, '.');
+    if (filename) {
+        filename++; 
+        strncpy(currentLevelName, filename, sizeof(currentLevelName) - 1);
+        currentLevelName[sizeof(currentLevelName) - 1] = '\0';
+    } else {
+        strcpy(currentLevelName, "unknown");
+    }
 
     for (int y = 0; y < HEIGHT; y++) {
         for (int x = 0; x < WIDTH; x++) {
@@ -303,7 +327,7 @@ void loadLevel(int level) {
         map[y][WIDTH] = '\0';
     }
 
-    int mapLoaded = loadMapFromFile(filename);
+    int mapLoaded = loadMapFromFile(levelPath);
 
     if (!mapLoaded) {
         const char* defaultMap[] = {
@@ -327,6 +351,7 @@ void loadLevel(int level) {
             strncpy(map[y], defaultMap[y], WIDTH);
             map[y][WIDTH] = '\0';
         }
+        strcpy(currentLevelName, "default");
     }
 
     initialiseGame(&gameState);
@@ -339,14 +364,12 @@ int main(void) {
     spriteArea = loadSpriteFile("<LodeRunner$Dir>.sprites");
 
     initialiseText();
-
-    loadLevel(1);
+    initialiseMenu();
 
     window = createWindow();
     createWimpBlock(window);
 
     initialiseTimer();
-    initialiseGame(&gameState);
 
     xwimp_open_window(&block->open);
 

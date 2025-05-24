@@ -1,0 +1,235 @@
+#include "menu.h"
+#include "text.h"
+#include "main.h"
+#include "wimp.h"
+#include "oslib/osfile.h"
+#include "oslib/os.h"
+#include "oslib/colourtrans.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+MenuState menuState;
+osspriteop_header *selectorSprite;
+osspriteop_header *logoSprite;
+osspriteop_header *bluesquareSprite;
+
+void initialiseMenu(void) {
+    menuState.levelCount = 0;
+    menuState.currentPage = 0;
+    menuState.totalPages = 0;
+    menuState.selectedIndex = 0;
+    menuState.isActive = 1;
+    
+    xosspriteop_select_sprite(osspriteop_USER_AREA, spriteArea, 
+                              (osspriteop_id)"selector", &selectorSprite);
+
+    xosspriteop_select_sprite(osspriteop_USER_AREA, spriteArea, 
+                              (osspriteop_id)"logo", &logoSprite);
+
+    xosspriteop_select_sprite(osspriteop_USER_AREA, spriteArea, 
+                              (osspriteop_id)"bluesquare", &bluesquareSprite);
+    
+    loadLevelList();
+}
+
+void loadLevelList(void) {
+    menuState.levelCount = 0;
+    
+    for (int i = 1; i <= 100 && menuState.levelCount < MAX_LEVELS; i++) {
+        char testPath[512];
+        sprintf(testPath, "<LodeRunner$Dir>.maps.level%d", i);
+        
+        fileswitch_object_type objType;
+        os_error *error = xosfile_read_stamped_no_path(
+            testPath, &objType, NULL, NULL, NULL, NULL, NULL
+        );
+        
+        if (!error && objType == fileswitch_IS_FILE) {
+            sprintf(menuState.levels[menuState.levelCount].filename, "level%d", i);
+            sprintf(menuState.levels[menuState.levelCount].displayName, "Level %d", i);
+            menuState.levelCount++;
+        }
+    }
+    
+    menuState.totalPages = (menuState.levelCount + LEVELS_PER_PAGE - 1) / LEVELS_PER_PAGE;
+    if (menuState.totalPages == 0) {
+        menuState.totalPages = 1;
+    }
+    
+    if (menuState.currentPage >= menuState.totalPages) {
+        menuState.currentPage = 0;
+        menuState.selectedIndex = 0;
+    }
+}
+
+void renderMenu(int baseX, int baseY) {
+    if (!menuState.isActive) {
+        return;
+    }
+
+    for (int y = 0; y < HEIGHT; y++) {
+        for (int x = 0; x < WIDTH; x++) {
+            int screenX = baseX + (x * TILE_SIZE);
+            int screenY = baseY - (y * TILE_SIZE);
+            
+            xosspriteop_put_sprite_scaled(
+                osspriteop_PTR, spriteArea, (osspriteop_id)bluesquareSprite,
+                screenX, screenY,
+                os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES | osspriteop_USE_MASK,
+                &factors, transTab
+            );
+        }
+    }
+    
+    int menuCenterY = baseY - (HEIGHT * TILE_SIZE) / 2;
+    int titleY = menuCenterY + (TILE_SIZE * 3);
+    int listStartY = menuCenterY + TILE_SIZE;
+
+    int logoY = titleY;
+    int logoWidth = 256 * GAME_SIZE;
+    int logoX = baseX + ((logoWidth / 4));
+    xosspriteop_put_sprite_scaled(
+      osspriteop_PTR, spriteArea, (osspriteop_id)logoSprite,
+      logoX, logoY,
+      os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES | osspriteop_USE_MASK,
+      &factors, transTab
+    );
+    
+    renderTextCentered("select level", baseX, titleY);
+    
+    if (menuState.totalPages > 1) {
+        char pageInfo[64];
+        sprintf(pageInfo, "page %d of %d", menuState.currentPage + 1, menuState.totalPages);
+        renderTextCentered(pageInfo, baseX, titleY - 40);
+    }
+    
+    int startLevel = menuState.currentPage * LEVELS_PER_PAGE;
+    int endLevel = startLevel + LEVELS_PER_PAGE;
+    if (endLevel > menuState.levelCount) {
+        endLevel = menuState.levelCount;
+    }
+    
+    for (int i = startLevel; i < endLevel; i++) {
+        int listIndex = i - startLevel;
+        int itemY = listStartY - (listIndex * 48);
+        int textX = baseX;
+        int selectorX = renderTextCentered(menuState.levels[i].displayName, textX, itemY);
+        if (listIndex == menuState.selectedIndex) {
+            selectorX = selectorX - 60;
+            xosspriteop_put_sprite_scaled(
+                osspriteop_PTR, spriteArea, (osspriteop_id)selectorSprite,
+                selectorX, itemY,
+                os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES | osspriteop_USE_MASK,
+                &factors, transTab
+            );
+        }
+    }
+
+    int instructY = menuCenterY - (TILE_SIZE * 3);
+    renderTextCentered("up/down: select z: play", baseX, instructY);
+    renderTextCentered("left/right: page", baseX, (instructY - TILE_SIZE));
+    
+    if (menuState.levelCount == 0) {
+        renderTextCentered("no levels found", baseX, listStartY);
+    }
+}
+
+void processMenuInput(int keyCode) {
+    if (!menuState.isActive) {
+        return;
+    }
+    
+    if (menuState.levelCount == 0) {
+        return;
+    }
+    
+    int levelsOnCurrentPage = LEVELS_PER_PAGE;
+    int startLevel = menuState.currentPage * LEVELS_PER_PAGE;
+    if (startLevel + LEVELS_PER_PAGE > menuState.levelCount) {
+        levelsOnCurrentPage = menuState.levelCount - startLevel;
+    }
+    
+    switch (keyCode) {
+        case wimp_KEY_UP:
+            menuState.selectedIndex--;
+            if (menuState.selectedIndex < 0) {
+                menuState.selectedIndex = levelsOnCurrentPage - 1;
+            }
+            updateWindow(gameWindow);
+            break;
+            
+        case wimp_KEY_DOWN:
+            menuState.selectedIndex++;
+            if (menuState.selectedIndex >= levelsOnCurrentPage) {
+                menuState.selectedIndex = 0;
+            }
+            updateWindow(gameWindow);
+            break;
+            
+        case wimp_KEY_LEFT:
+            if (menuState.totalPages > 1) {
+                menuState.currentPage--;
+                if (menuState.currentPage < 0) {
+                    menuState.currentPage = menuState.totalPages - 1;
+                }
+                menuState.selectedIndex = 0;
+                updateWindow(gameWindow);
+            }
+            break;
+            
+        case wimp_KEY_RIGHT:
+            if (menuState.totalPages > 1) {
+                menuState.currentPage++;
+                if (menuState.currentPage >= menuState.totalPages) {
+                    menuState.currentPage = 0;
+                }
+                menuState.selectedIndex = 0;
+                updateWindow(gameWindow);
+            }
+            break;
+            
+        case 'z':
+            if (menuState.levelCount > 0) {
+                int levelIndex = menuState.currentPage * LEVELS_PER_PAGE + menuState.selectedIndex;
+                if (levelIndex < menuState.levelCount) {
+                    char levelPath[512];
+                    sprintf(levelPath, "<LodeRunner$Dir>.maps.%s", 
+                           menuState.levels[levelIndex].filename);
+                    hideMenu();
+                    loadLevelFromPath(levelPath);
+                }
+            }
+            break;
+            
+        default:
+            break;
+    }
+}
+
+void showMenu(void) {
+    menuState.isActive = 1;
+    loadLevelList();
+}
+
+void hideMenu(void) {
+    menuState.isActive = 0;
+}
+
+int isMenuActive(void) {
+    return menuState.isActive;
+}
+
+char* getCurrentSelectedLevel(void) {
+    if (menuState.levelCount == 0) {
+        return NULL;
+    }
+    
+    int levelIndex = menuState.currentPage * LEVELS_PER_PAGE + menuState.selectedIndex;
+    if (levelIndex >= menuState.levelCount) {
+        return NULL;
+    }
+    
+    return menuState.levels[levelIndex].displayName;
+}

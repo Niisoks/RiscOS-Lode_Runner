@@ -7,7 +7,9 @@
     "main": "c",
     "math.h": "c",
     "enemy": "c",
-    "cstdlib": "c"
+    "cstdlib": "c",
+    "menu": "c",
+    "stdlib.h": "c"
   },
   "C_Cpp.errorSquiggles": "disabled",
   
