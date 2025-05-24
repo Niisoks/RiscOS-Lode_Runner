@@ -1,0 +1,17 @@
+{
+  "files.associations": {
+    "text": "c",
+    "render": "c",
+    "wimp": "c",
+    "entity": "c",
+    "main": "c",
+    "math.h": "c",
+    "enemy": "c",
+    "cstdlib": "c",
+    "menu": "c",
+    "stdlib.h": "c",
+    "config": "c"
+  },
+  "C_Cpp.errorSquiggles": "disabled",
+  
+}

@@ -1,0 +1,42 @@
+#ifndef TEXT_H
+#define TEXT_H
+
+#include "oslib/wimp.h"
+#include "oslib/os.h"        
+#include "oslib/osfile.h"
+#include "oslib/osspriteop.h"                    
+#include "oslib/colourtrans.h"
+#include "entity.h"
+
+#define MAX_DEBUG_LINES 5
+#define MAX_DEBUG_LENGTH 254
+
+void initialiseText(void);
+void renderText(const char *text, int x, int y);
+int renderTextCentered(const char *text, int baseX, int y);
+void renderTextCenteredMultiLine(const char *text, int baseX, int y);
+
+void debugPrint(const char *format, ...);
+void renderDebugText(int baseX, int baseY);
+void clearDebugText(void);
+
+void renderGameStats(GameState *state, int baseX, int baseY);
+void renderCenteredMessage(const char *message, int baseX, int baseY);
+void setCenteredMessage(const char *format, ...);
+void updateCenteredMessage(void);
+
+extern osspriteop_header *letterSprites[26];
+extern osspriteop_header *numberSprites[10];
+extern osspriteop_header *punctuationSprites[3];
+extern osspriteop_header *copyrightSprite;
+extern int textInitialised;
+os_factors textFactors;
+
+extern char debugLines[MAX_DEBUG_LINES][MAX_DEBUG_LENGTH];
+extern int currentDebugLine;
+
+extern char centeredMessage[MAX_DEBUG_LENGTH];
+extern int showCenteredMessage;
+extern int centeredMessageTimer;
+
+#endif

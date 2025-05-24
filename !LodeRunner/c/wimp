@@ -1,5 +1,6 @@
 #include "wimp.h"
 #include "entity.h"
+#include "config.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -98,10 +99,12 @@ osspriteop_area* loadSpriteFile(const char *filename) {
 
     xosspriteop_select_sprite(osspriteop_USER_AREA, area, (osspriteop_id)"blacksq", &blackSquareSprite);
 
-    factors.xmul = (1<<(modeInfo.info.xEigFactor-1)) * GAME_SIZE;
-    factors.ymul = 1<<(modeInfo.info.yEigFactor) * GAME_SIZE;
+    // Use dynamic game size from config
+    int currentSize = getGameSize();
+    factors.xmul = (1<<(modeInfo.info.xEigFactor-1)) * currentSize;
+    factors.ymul = (1<<(modeInfo.info.yEigFactor-1)) * currentSize;  
     factors.xdiv = 1;
-    factors.ydiv = 2;         
+    factors.ydiv = 1;  
 
     return area;
 }
@@ -109,10 +112,18 @@ osspriteop_area* loadSpriteFile(const char *filename) {
 wimp_window* createWindow(void) {
     wimp_window* window = (wimp_window*)malloc(sizeof(wimp_window));
 
+    // Use dynamic game size for window calculations
+    int currentSize = getGameSize();
+    int tileSize = 32 * currentSize;
+    int gameAreaWidth = WIDTH * tileSize;
+    int gameAreaHeight = HEIGHT * tileSize;
+    
+    int statsAreaHeight = 24;
+    
     window->visible.x0 = 0;
     window->visible.y0 = 0;
-    window->visible.x1 = WIDTH * TILE_SIZE;
-    window->visible.y1 = HEIGHT * TILE_SIZE;
+    window->visible.x1 = gameAreaWidth;
+    window->visible.y1 = gameAreaHeight + statsAreaHeight;
     window->xscroll = 0;
     window->yscroll = 0;
     window->next = wimp_TOP;
@@ -135,9 +146,9 @@ wimp_window* createWindow(void) {
     window->highlight_bg = wimp_COLOUR_CREAM;
 
     window->extent.x0 = 0;
-    window->extent.y0 = -HEIGHT * TILE_SIZE * 2;
-    window->extent.x1 = WIDTH * TILE_SIZE;
-    window->extent.y1 = HEIGHT * TILE_SIZE * 2;
+    window->extent.y0 = -(gameAreaHeight + statsAreaHeight);
+    window->extent.x1 = gameAreaWidth;
+    window->extent.y1 = 0;
 
     window->title_flags = wimp_ICON_TEXT | wimp_ICON_HCENTRED | wimp_ICON_VCENTRED;
     window->work_flags = wimp_BUTTON_WRITABLE << wimp_ICON_BUTTON_TYPE_SHIFT;
@@ -171,11 +182,14 @@ void updateWindow(wimp_w window) {
     wimp_draw draw;
     int more;
 
+    // Use dynamic tile size
+    int tileSize = 32 * getGameSize();
+
     draw.w = window;
     draw.box.x0 = 0;
-    draw.box.y0 = -HEIGHT * TILE_SIZE * 2;
-    draw.box.x1 = WIDTH * TILE_SIZE; 
-    draw.box.y1 = HEIGHT * TILE_SIZE * 2;
+    draw.box.y0 = -HEIGHT * tileSize;
+    draw.box.x1 = WIDTH * tileSize; 
+    draw.box.y1 = HEIGHT * tileSize;
 
     xwimp_update_window(&draw, &more);
     render(&draw, more);

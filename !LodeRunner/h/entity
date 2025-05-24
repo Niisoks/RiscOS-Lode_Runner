@@ -16,9 +16,9 @@ typedef enum {
     DOWN = 4
 } Direction;
 
-#define GAME_SIZE 2
+#define GAME_SIZE getGameSize()
 #define WIDTH 20
-#define HEIGHT 20
+#define HEIGHT 15
 #define TILE_SIZE (32 * GAME_SIZE)
 #define HOLE_REGENERATION_TIME 300
 #define WALL_PADDING 0.0f
@@ -83,6 +83,8 @@ extern os_factors factors;
 extern osspriteop_area *spriteArea;
 extern osspriteop_header *blackSquareSprite;
 
+int getGameSize(void);
+
 osspriteop_header* getEntitySprite(Entity *entity, GameState *state, int isPlayer, int entityIndex);
 
 void initialisePlayerAnimState(void);
@@ -101,6 +103,5 @@ void updateMovementAnimation(GameState *state);
 void updateAnimationFrames(GameState *state);
 void applyGravity(GameState *state);
 int checkCollision(GameState *state);
-
 
 #endif

@@ -1,0 +1,219 @@
+#include <ctype.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "text.h"
+#include "wimp.h"
+#include "main.h"
+#include "config.h"
+
+osspriteop_header *letterSprites[26];
+osspriteop_header *numberSprites[10];
+osspriteop_header *punctuationSprites[3];
+osspriteop_header *copyrightSprite;
+int textInitialised = 0;
+
+char debugLines[MAX_DEBUG_LINES][MAX_DEBUG_LENGTH];
+int currentDebugLine = 0;
+
+char centeredMessage[MAX_DEBUG_LENGTH] = {0};
+int showCenteredMessage = 0;
+int centeredMessageTimer = 0;
+
+#define CHAR_WIDTH 16
+#define CHAR_HEIGHT 16
+
+void initialiseText(void) {
+    if (textInitialised) return;
+
+    for (int i = 0; i < 10; i++) {
+        char spriteName[16];
+        sprintf(spriteName, "number%d", i);
+        xosspriteop_select_sprite(osspriteop_USER_AREA, spriteArea,
+                                  (osspriteop_id)spriteName, &numberSprites[i]);
+    }
+
+    for (int i = 0; i < 26; i++) {
+        char spriteName[16];
+        sprintf(spriteName, "letter%c", 'a' + i);
+        xosspriteop_select_sprite(osspriteop_USER_AREA, spriteArea,
+                                  (osspriteop_id)spriteName, &letterSprites[i]);
+    }
+
+    xosspriteop_select_sprite(osspriteop_USER_AREA, spriteArea,
+                              (osspriteop_id) "punctuation1",
+                              &punctuationSprites[0]);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, spriteArea,
+                              (osspriteop_id) "punctuation2",
+                              &punctuationSprites[1]);
+    xosspriteop_select_sprite(osspriteop_USER_AREA, spriteArea,
+                              (osspriteop_id) "punctuation3",
+                              &punctuationSprites[2]);
+
+    xosspriteop_select_sprite(osspriteop_USER_AREA, spriteArea,
+                              (osspriteop_id) "copyright", &copyrightSprite);
+
+    clearDebugText();
+
+    textInitialised = 1;
+}
+
+void clearDebugText(void) {
+    for (int i = 0; i < MAX_DEBUG_LINES; i++) {
+        debugLines[i][0] = '\0';
+    }
+    currentDebugLine = 0;
+}
+
+void debugPrint(const char *format, ...) {
+    va_list args;
+    va_start(args, format);
+
+    vsnprintf(debugLines[currentDebugLine], MAX_DEBUG_LENGTH - 1, format, args);
+
+    debugLines[currentDebugLine][MAX_DEBUG_LENGTH - 1] = '\0';
+
+    currentDebugLine = (currentDebugLine + 1) % MAX_DEBUG_LINES;
+
+    va_end(args);
+}
+
+void setCenteredMessage(const char *format, ...) {
+    va_list args;
+    va_start(args, format);
+
+    vsnprintf(centeredMessage, MAX_DEBUG_LENGTH - 1, format, args);
+
+    centeredMessage[MAX_DEBUG_LENGTH - 1] = '\0';
+
+    showCenteredMessage = 1;
+    centeredMessageTimer = 120;
+
+    va_end(args);
+}
+
+void updateCenteredMessage(void) {
+    if (showCenteredMessage) {
+        if (--centeredMessageTimer <= 0) {
+            showCenteredMessage = 0;
+            centeredMessage[0] = '\0';
+        }
+    }
+}
+
+static osspriteop_header *getCharSprite(char c) {
+    if (c >= '0' && c <= '9') {
+        return numberSprites[c - '0'];
+    } else if (c >= 'a' && c <= 'z') {
+        return letterSprites[c - 'a'];
+    } else if (c >= 'A' && c <= 'Z') {
+        return letterSprites[c - 'A'];
+    } else if (c == '.') {
+        return punctuationSprites[0];
+    } else if (c == ':') {
+        return punctuationSprites[1];
+    } else if (c == '/') {
+        return punctuationSprites[2];
+    } else if (c == 'c') {
+        return copyrightSprite;
+    }
+
+    return NULL;
+}
+
+void renderText(const char *text, int x, int y) {
+    if (!textInitialised) {
+        initialiseText();
+    }
+
+    if (!text) return;
+
+    int currentX = x;
+    int len = strlen(text);
+    int currentGameSize = getGameSize();
+
+    for (int i = 0; i < len; i++) {
+        osspriteop_header *sprite = getCharSprite(text[i]);
+
+        if (sprite) {
+            xosspriteop_put_sprite_scaled(
+                osspriteop_PTR, spriteArea, (osspriteop_id)sprite, currentX, y,
+                os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES |
+                    osspriteop_USE_MASK,
+                &factors, transTab);
+        }
+
+        currentX += CHAR_WIDTH * currentGameSize;
+    }
+}
+
+int renderTextCentered(const char *text, int baseX, int y) {
+    if (!text) return 0;
+
+    int currentGameSize = getGameSize();
+    int textWidth = strlen(text) * CHAR_WIDTH * currentGameSize;
+
+    int gameAreaWidth = WIDTH * (32 * currentGameSize);
+    int centerOffset = (gameAreaWidth - textWidth) / 2;
+
+    int x = baseX + centerOffset;
+
+    renderText(text, x, y);
+    return x;
+}
+
+void renderTextCenteredMultiLine(const char *text, int baseX, int y) {
+    if (!text) return;
+    
+    int currentY = y;
+    int currentGameSize = getGameSize();
+    int lineHeight = CHAR_HEIGHT * currentGameSize + 4;
+    
+    char textCopy[256];
+    strncpy(textCopy, text, sizeof(textCopy) - 1);
+    textCopy[sizeof(textCopy) - 1] = '\0';
+    
+    char *line = strtok(textCopy, "\n");
+    while (line != NULL) {
+        renderTextCentered(line, baseX, currentY);
+        currentY -= lineHeight;  
+        line = strtok(NULL, "\n");
+    }
+}
+
+void renderDebugText(int baseX, int baseY) {
+    int currentGameSize = getGameSize();
+    int tileSize = 32 * currentGameSize;
+    int startY = baseY - tileSize;
+
+    for (int i = 0; i < MAX_DEBUG_LINES; i++) {
+        int lineIndex = (currentDebugLine + i) % MAX_DEBUG_LINES;
+        if (debugLines[lineIndex][0] != '\0') {
+            int lineSpacing = CHAR_HEIGHT * currentGameSize + 4;
+            renderText(debugLines[lineIndex], baseX + 8,
+                       startY - (i * lineSpacing));
+        }
+    }
+}
+
+void renderGameStats(GameState *state, int baseX, int baseY) {
+    int currentGameSize = getGameSize();
+    int tileSize = 32 * currentGameSize;
+    int statsY = baseY - (HEIGHT * tileSize) + tileSize;
+    char statsText[MAX_DEBUG_LENGTH];
+    sprintf(statsText, "level:%s  gold:%d/%d  size:%dx", currentLevelName,
+            state->goldCollected, state->goldTotal, currentGameSize);
+
+    renderTextCenteredMultiLine(statsText, baseX, statsY);
+}
+
+void renderCenteredMessage(const char *message, int baseX, int baseY) {
+    if (!message || !message[0]) return;
+
+    int currentGameSize = getGameSize();
+    int tileSize = 32 * currentGameSize;
+    int messageY = baseY - ((HEIGHT / 2) * tileSize);
+
+    renderTextCenteredMultiLine(message, baseX, messageY);
+}

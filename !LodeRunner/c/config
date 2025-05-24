@@ -1,0 +1,54 @@
+#include "config.h"
+#include "entity.h"
+#include "wimp.h"
+#include "main.h"
+#include "render.h"
+#include <stdlib.h>
+#include <string.h>
+
+int currentGameSize = DEFAULT_GAME_SIZE;
+
+int loadConfig(void) {
+    FILE *file = fopen(CONFIG_FILE_PATH, "r");
+    if (!file) {
+        currentGameSize = DEFAULT_GAME_SIZE;
+        return 1;
+    }
+    
+    char line[256];
+    if (fgets(line, sizeof(line), file)) {
+        int size = atoi(line);
+        if (size >= 1 && size <= 4) {
+            currentGameSize = size;
+        } else {
+            currentGameSize = DEFAULT_GAME_SIZE;
+        }
+    } else {
+        currentGameSize = DEFAULT_GAME_SIZE;
+    }
+    
+    fclose(file);
+    return 1;
+}
+
+int saveConfig(void) {
+    FILE *file = fopen(CONFIG_FILE_PATH, "w");
+    if (!file) {
+        return 0;
+    }
+    
+    fprintf(file, "%d\n", currentGameSize);
+    fclose(file);
+    return 1;
+}
+
+void setGameSize(int newSize) {
+    if (newSize >= 1 && newSize <= 3) {
+        currentGameSize = newSize;
+        saveConfig();
+    }
+}
+
+int getGameSize(void) {
+    return currentGameSize;
+}
