@@ -43,10 +43,21 @@ void initialiseEnemyAnimStates(void) {
 }
 
 void updateEnemyAnimationFrames(GameState *state) {
+    static int enemyAnimCounters[5] = {0};
     for (int i = 0; i < state->enemyCount; i++) {
         Entity *enemy = &state->enemies[i];
 
         if (!enemy->isMoving) continue;
+
+         enemyAnimCounters[i]++;
+        
+        int animationDelay = 2; 
+        
+        if (enemyAnimCounters[i] < animationDelay) {
+            continue; 
+        }
+        
+        enemyAnimCounters[i] = 0;
 
         if ((enemy->moveDir == LEFT || enemy->moveDir == RIGHT)) {
             if (isOnTightrope(enemy->tileX, enemy->tileY)) {
@@ -183,15 +194,27 @@ void moveEnemy(GameState *state, Entity *enemy, Direction dir) {
                 return;
             }
         }
+        else if (isClimbable(tileX, tileY)) {
 
-        else if (!isClimbable(tileX, tileY) &&
-                 !(isClimbable(tileX, nextY) &&
-                   supports(tileX, tileY, state))) {
-            return;
+            if (!isWalkable(tileX, nextY, state)) {
+                return;
+            }
         }
 
-        else if (!isClimbable(tileX, nextY) && !isLadderTop(tileX, tileY)) {
-            return;
+        else if (isClimbable(tileX, nextY) && supports(tileX, tileY, state)) {
+
+            if (!isWalkable(tileX, nextY, state)) {
+                return;
+            }
+        }
+
+        else if (isLadderTop(tileX, tileY)) {
+            if (!isClimbable(tileX, nextY) && !isWalkable(tileX, nextY, state)) {
+                return;
+            }
+        }
+        else {
+            return; 
         }
     }
 
@@ -218,14 +241,16 @@ void updateEnemyMovementAnimation(GameState *state) {
             enemy->prevVisualY = enemy->visualY;
             enemy->hasMoved = 1;
 
-            enemy->visualX += dx * state->pixelSpeed;
-            enemy->visualY += dy * state->pixelSpeed;
+            // Keep your half-speed modification
+            enemy->visualX += dx * state->pixelSpeed * 0.5;
+            enemy->visualY += dy * state->pixelSpeed * 0.5;
         }
 
         float distToTarget = sqrt(pow(enemy->targetX - enemy->visualX, 2) +
                                   pow(enemy->targetY - enemy->visualY, 2));
 
-        if (distToTarget < state->pixelSpeed) {
+        // Smaller threshold for smoother movement
+        if (distToTarget < state->pixelSpeed * 0.25) {  // Reduced from 0.5
             enemy->visualX = enemy->targetX;
             enemy->visualY = enemy->targetY;
             enemy->isMoving = 0;
@@ -678,7 +703,7 @@ static Direction tryAnySafeDirection(GameState *state, int enemyX, int enemyY,
 }
 
 void updateEnemyAI(GameState *state) {
-    if (++state->enemyUpdateCooldown < 8) return;
+    if (++state->enemyUpdateCooldown < 4) return;
     state->enemyUpdateCooldown = 0;
 
     for (int i = 0; i < state->enemyCount; i++) {

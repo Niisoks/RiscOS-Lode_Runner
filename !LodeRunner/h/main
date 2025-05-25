@@ -15,7 +15,7 @@
 
 extern int keyState[4];
 extern int keyPressedThisFrame[4];
-extern char currentLevelName[256];
+extern char currentLevelName[20];
 
 extern os_t timer;
 extern void (*timerCallback)(void*);

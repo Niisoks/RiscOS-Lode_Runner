@@ -17,10 +17,10 @@ typedef enum {
 } Direction;
 
 #define GAME_SIZE getGameSize()
-#define WIDTH 20
-#define HEIGHT 15
+#define WIDTH 30
+#define HEIGHT 17
 #define TILE_SIZE (32 * GAME_SIZE)
-#define HOLE_REGENERATION_TIME 300
+#define HOLE_REGENERATION_TIME 700
 #define WALL_PADDING 0.0f
 
 typedef struct {
@@ -82,6 +82,7 @@ extern osspriteop_header *wallSprite, *ladderSprite, *goldSprite, *holeSprite, *
 extern os_factors factors;
 extern osspriteop_area *spriteArea;
 extern osspriteop_header *blackSquareSprite;
+extern osspriteop_header *stoneSprite;
 
 int getGameSize(void);
 
@@ -103,5 +104,6 @@ void updateMovementAnimation(GameState *state);
 void updateAnimationFrames(GameState *state);
 void applyGravity(GameState *state);
 int checkCollision(GameState *state);
+int isAtWinPosition(GameState *state);
 
 #endif

@@ -16,6 +16,7 @@ extern wimp_window *window;
 extern wimp_block *block;
 extern osspriteop_area *spriteArea;
 extern osspriteop_trans_tab *transTab;
+extern osspriteop_header *stoneSprite;
 
 void updateModeInfo(void);
 osspriteop_area* loadSpriteFile(const char *filename);

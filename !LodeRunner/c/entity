@@ -58,9 +58,6 @@ osspriteop_header* getEntitySprite(Entity *entity, GameState *state, int isPlaye
 }
 
 osspriteop_header* getPlayerSprite(Entity *player, GameState *state) {
-    if (player->inHole) {
-        return playerFallSprite2;
-    }
 
     if (player->isDigging) {
         return (state->frame % 4 < 2) ? playerDigSprite1 : playerDigSprite2;
@@ -137,8 +134,7 @@ void moveEntity(GameState *state, Entity *entity, Direction dir, int isPlayer) {
 }
 
 void movePlayer(GameState *state, Entity *player, Direction dir) {
-    if (player->inHole) return;
-    
+
     if (player->isDigging) return;
 
     if (playerIsFalling && (dir == LEFT || dir == RIGHT) && !isOnTightrope(player->tileX, player->tileY)) {
@@ -221,10 +217,28 @@ void movePlayer(GameState *state, Entity *player, Direction dir) {
                     player->moveDir = dir;
                 }
             }
-            else if (isClimbable(tileX, tileY) || 
-                (tileY < HEIGHT-1 && isClimbable(tileX, tileY+1) && supports(tileX, tileY, state))) {
-                if (tileY < HEIGHT-1 && 
-                    (isClimbable(tileX, tileY+1) || isLadderTop(tileX, tileY))) {
+            else if (isClimbable(tileX, tileY)) {
+                if (tileY < HEIGHT-1 && isWalkable(tileX, tileY+1, state)) {
+                    player->targetX = (float)tileX;
+                    player->targetY = (float)(tileY + 1);
+                    player->isMoving = 1;
+                    player->moveDir = dir;
+                }
+                else if (tileY < HEIGHT-1 && isSolid(tileX, tileY+1)) {
+                    player->targetX = (float)tileX;
+                    player->targetY = (float)tileY + WALL_PADDING;
+                    player->isMoving = 1;
+                    player->moveDir = dir;
+                }
+            }
+            else if (tileY < HEIGHT-1 && isClimbable(tileX, tileY+1) && supports(tileX, tileY, state)) {
+                player->targetX = (float)tileX;
+                player->targetY = (float)(tileY + 1);
+                player->isMoving = 1;
+                player->moveDir = dir;
+            }
+            else if (isLadderTop(tileX, tileY)) {
+                if (tileY < HEIGHT-1 && isClimbable(tileX, tileY+1)) {
                     player->targetX = (float)tileX;
                     player->targetY = (float)(tileY + 1);
                     player->isMoving = 1;
@@ -301,8 +315,7 @@ void applyPlayerGravity(GameState *state) {
         playerIsFalling = 0;
     }
 
-    if (!player->isMoving && !isInHole(player->tileX, player->tileY) && 
-        !supports(player->tileX, player->tileY, state) && 
+    if (!player->isMoving && !supports(player->tileX, player->tileY, state) && 
         !isOnTightrope(player->tileX, player->tileY) && 
         !isClimbable(player->tileX, player->tileY)) {
 
@@ -334,7 +347,9 @@ void dig(GameState *state, int dx) {
         player->digDirection = dx;
         player->digTimer = 20; 
     }
+
 }
+
 
 int findSafePosition(int x, int y, int *newX, int *newY) {
     int dx[] = {0, -1, 1, 0, -1, -1, 1, 1};
@@ -365,6 +380,7 @@ void updateHoleTimers(GameState *state) {
     for (int y = 0; y < HEIGHT; y++) {
         for (int x = 0; x < WIDTH; x++) {
             if (map[y][x] == '.' && dug[y][x]) {
+
                 if (state->player.tileX == x && state->player.tileY == y) {
                     state->player.inHole = 1;
                 }
@@ -378,6 +394,11 @@ void updateHoleTimers(GameState *state) {
 
                 if (holeTimer[y][x] != 0 && 
                     (currentTime - holeTimer[y][x]) >= HOLE_REGENERATION_TIME) {
+
+                    if (state->player.inHole && state->player.tileX == x && state->player.tileY == y) {
+                        state->gameOver = 1;
+                        continue;
+                    }
 
                     if (state->player.inHole && state->player.tileX == x && state->player.tileY == y) {
                         int newX, newY;
@@ -431,6 +452,14 @@ void updateHoleTimers(GameState *state) {
         state->player.inHole = 0;
     }
 
-    // Update enemy hole states
     updateEnemyHoleTimers(state);
+}
+
+int isAtWinPosition(GameState *state) {
+    Entity *player = &state->player;
+    
+    if (state->goldCollected >= state->goldTotal && player->tileY == 0) {
+        return 1;
+    }
+    return 0;
 }
