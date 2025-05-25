@@ -10,25 +10,34 @@ Direction lastEnemyDirections[5] = {NEUTRAL, NEUTRAL, NEUTRAL, NEUTRAL,
 int enemyStuckCounters[5] = {0};
 int preventBacktracking = 1;
 
+os_t enemyHoleStartTime[5] = {0}; 
+os_t enemyHoleEscapeTime[5] = {0};
+int enemyEscapedFromHole[5] = {0}; 
+int enemyEscapeImmunity[5] = {0};  
+
+#define MIN_HOLE_ESCAPE_TIME 100
+#define MAX_HOLE_ESCAPE_TIME 300
+#define ESCAPE_IMMUNITY_MOVES 1  
+
 static Direction checkLedgeDrop(GameState *state, int enemyX, int enemyY,
-                                int playerX, int playerY);
-static Direction checkLadderClimb(GameState *state, int enemyX, int enemyY,
-                                  int playerX, int playerY);
-static int shouldDropFromTightrope(GameState *state, int enemyX, int enemyY,
-                                   int playerX, int playerY);
-static Direction checkHorizontalPath(GameState *state, int enemyX, int enemyY,
-                                     int playerX);
-static Direction checkLadderExit(GameState *state, int enemyX, int enemyY,
-                                 int playerX, int playerY);
-static Direction findBestLadder(GameState *state, int enemyX, int enemyY,
                                 int playerX, int playerY, int enemyIndex);
+static Direction checkLadderClimb(GameState *state, int enemyX, int enemyY,
+                                  int playerX, int playerY, int enemyIndex);
+static Direction checkHorizontalPath(GameState *state, int enemyX, int enemyY,
+                                     int playerX, int enemyIndex);
+static Direction checkLadderExit(GameState *state, int enemyX, int enemyY,
+                                 int playerX, int playerY, int enemyIndex);
 static Direction breakOscillation(GameState *state, int enemyX, int enemyY,
-                                  int playerX);
+                                  int playerX, int enemyIndex);
+static Direction tryAnySafeDirection(GameState *state, int enemyX, int enemyY,
+                                     int playerX, int playerY, int enemyIndex);
 static Direction moveCloserHorizontally(GameState *state, int enemyX,
                                         int enemyY, int playerX,
                                         int enemyIndex);
-static Direction tryAnySafeDirection(GameState *state, int enemyX, int enemyY,
-                                     int playerX, int playerY, int enemyIndex);
+static Direction findBestLadder(GameState *state, int enemyX, int enemyY,
+                                int playerX, int playerY, int enemyIndex);
+static int shouldDropFromTightrope(GameState *state, int enemyX, int enemyY,
+                                   int playerX, int playerY);
 
 void initialiseEnemyAnimStates(void) {
     for (int i = 0; i < 5; i++) {
@@ -42,6 +51,15 @@ void initialiseEnemyAnimStates(void) {
     }
 }
 
+void initialiseEnemyHoleData(void) {
+    for (int i = 0; i < 5; i++) {
+        enemyHoleStartTime[i] = 0;
+        enemyEscapedFromHole[i] = 0;
+        enemyEscapeImmunity[i] = 0;
+        enemyHoleEscapeTime[i] = 0;
+    }
+}
+
 void updateEnemyAnimationFrames(GameState *state) {
     static int enemyAnimCounters[5] = {0};
     for (int i = 0; i < state->enemyCount; i++) {
@@ -50,13 +68,13 @@ void updateEnemyAnimationFrames(GameState *state) {
         if (!enemy->isMoving) continue;
 
          enemyAnimCounters[i]++;
-        
+
         int animationDelay = 2; 
-        
+
         if (enemyAnimCounters[i] < animationDelay) {
             continue; 
         }
-        
+
         enemyAnimCounters[i] = 0;
 
         if ((enemy->moveDir == LEFT || enemy->moveDir == RIGHT)) {
@@ -150,6 +168,14 @@ void moveEnemy(GameState *state, Entity *enemy, Direction dir) {
     int nextX = tileX;
     int nextY = tileY;
 
+    int enemyIndex = -1;
+    for (int i = 0; i < state->enemyCount; i++) {
+        if (&state->enemies[i] == enemy) {
+            enemyIndex = i;
+            break;
+        }
+    }
+
     switch (dir) {
         case LEFT:
             nextX--;
@@ -165,6 +191,10 @@ void moveEnemy(GameState *state, Entity *enemy, Direction dir) {
             break;
         default:
             return;
+    }
+
+    if (isEnemyAt(state, nextX, nextY, enemyIndex)) {
+        return;
     }
 
     if (dir == LEFT || dir == RIGHT) {
@@ -241,7 +271,6 @@ void updateEnemyMovementAnimation(GameState *state) {
             enemy->prevVisualY = enemy->visualY;
             enemy->hasMoved = 1;
 
-            // Keep your half-speed modification
             enemy->visualX += dx * state->pixelSpeed * 0.5;
             enemy->visualY += dy * state->pixelSpeed * 0.5;
         }
@@ -249,11 +278,14 @@ void updateEnemyMovementAnimation(GameState *state) {
         float distToTarget = sqrt(pow(enemy->targetX - enemy->visualX, 2) +
                                   pow(enemy->targetY - enemy->visualY, 2));
 
-        // Smaller threshold for smoother movement
-        if (distToTarget < state->pixelSpeed * 0.25) {  // Reduced from 0.5
+        if (distToTarget < state->pixelSpeed * 0.25) {  
             enemy->visualX = enemy->targetX;
             enemy->visualY = enemy->targetY;
             enemy->isMoving = 0;
+
+            if (enemyEscapeImmunity[i] > 0) {
+                enemyEscapeImmunity[i]--;
+            }
         }
 
         updateLogicalPosition(enemy);
@@ -263,6 +295,10 @@ void updateEnemyMovementAnimation(GameState *state) {
 void applyEnemyGravity(GameState *state) {
     for (int i = 0; i < state->enemyCount; i++) {
         Entity *enemy = &state->enemies[i];
+
+        if (enemyEscapeImmunity[i] > 0) {
+            continue;
+        }
 
         if (enemy->isMoving || enemy->inHole ||
             supports(enemy->tileX, enemy->tileY, state) ||
@@ -320,7 +356,7 @@ Direction findBestDirection(GameState *state, Entity *enemy, int enemyIndex) {
     if (playerY > enemyY && !isOnTightrope(enemyX, enemyY) &&
         !isClimbable(enemyX, enemyY)) {
         Direction dropDir =
-            checkLedgeDrop(state, enemyX, enemyY, playerX, playerY);
+            checkLedgeDrop(state, enemyX, enemyY, playerX, playerY, enemyIndex);
         if (dropDir != NEUTRAL) {
             return dropDir;
         }
@@ -328,7 +364,7 @@ Direction findBestDirection(GameState *state, Entity *enemy, int enemyIndex) {
 
     if (playerY < enemyY) {
         Direction climbDir =
-            checkLadderClimb(state, enemyX, enemyY, playerX, playerY);
+            checkLadderClimb(state, enemyX, enemyY, playerX, playerY, enemyIndex);
         if (climbDir != NEUTRAL) {
             return climbDir;
         }
@@ -342,7 +378,7 @@ Direction findBestDirection(GameState *state, Entity *enemy, int enemyIndex) {
 
     if (enemyY == playerY) {
         Direction horizontalDir =
-            checkHorizontalPath(state, enemyX, enemyY, playerX);
+            checkHorizontalPath(state, enemyX, enemyY, playerX, enemyIndex);
         if (horizontalDir != NEUTRAL) {
             return horizontalDir;
         }
@@ -354,7 +390,7 @@ Direction findBestDirection(GameState *state, Entity *enemy, int enemyIndex) {
 
     if (isClimbable(enemyX, enemyY) && enemyX != playerX) {
         Direction exitDir =
-            checkLadderExit(state, enemyX, enemyY, playerX, playerY);
+            checkLadderExit(state, enemyX, enemyY, playerX, playerY, enemyIndex);
         if (exitDir != NEUTRAL) {
             return exitDir;
         }
@@ -369,7 +405,7 @@ Direction findBestDirection(GameState *state, Entity *enemy, int enemyIndex) {
     }
 
     if (enemyStuckCounters[enemyIndex] >= 2) {
-        Direction breakDir = breakOscillation(state, enemyX, enemyY, playerX);
+        Direction breakDir = breakOscillation(state, enemyX, enemyY, playerX, enemyIndex);
         if (breakDir != NEUTRAL) {
             return breakDir;
         }
@@ -404,22 +440,24 @@ int canReachPosition(GameState *state, int startX, int startY, int endX,
 }
 
 static Direction checkLedgeDrop(GameState *state, int enemyX, int enemyY,
-                                int playerX, int playerY) {
+                                int playerX, int playerY, int enemyIndex) {
     int horizontalDist = abs(playerX - enemyX);
     Direction dropDir = NEUTRAL;
     int bestDropDist = WIDTH + HEIGHT;
 
     if (!supports(enemyX, enemyY, state) &&
         isWalkable(enemyX, enemyY + 1, state) &&
-        !isEnemyInHoleAt(state, enemyX, enemyY + 1)) {
-        int potentialDist = horizontalDist;
-        if (potentialDist < bestDropDist) {
-            bestDropDist = potentialDist;
-            dropDir = DOWN;
-        }
+        !isEnemyInHoleAt(state, enemyX, enemyY + 1) &&
+        !isEnemyAt(state, enemyX, enemyY + 1, enemyIndex)) {
+            int potentialDist = horizontalDist;
+            if (potentialDist < bestDropDist) {
+                bestDropDist = potentialDist;
+                dropDir = DOWN;
+            }
     }
 
     if (enemyX < WIDTH - 1 && isWalkable(enemyX + 1, enemyY, state) &&
+        !isEnemyAt(state, enemyX + 1, enemyY, enemyIndex) &&
         !supports(enemyX + 1, enemyY, state) &&
         isWalkable(enemyX + 1, enemyY + 1, state) &&
         !isEnemyInHoleAt(state, enemyX + 1, enemyY + 1)) {
@@ -431,6 +469,7 @@ static Direction checkLedgeDrop(GameState *state, int enemyX, int enemyY,
     }
 
     if (enemyX > 0 && isWalkable(enemyX - 1, enemyY, state) &&
+        !isEnemyAt(state, enemyX - 1, enemyY, enemyIndex) &&
         !supports(enemyX - 1, enemyY, state) &&
         isWalkable(enemyX - 1, enemyY + 1, state) &&
         !isEnemyInHoleAt(state, enemyX - 1, enemyY + 1)) {
@@ -450,7 +489,7 @@ static Direction checkLedgeDrop(GameState *state, int enemyX, int enemyY,
 }
 
 static Direction checkLadderClimb(GameState *state, int enemyX, int enemyY,
-                                  int playerX, int playerY) {
+                                  int playerX, int playerY, int enemyIndex) {
     if (isClimbable(enemyX, enemyY)) {
         return UP;
     }
@@ -462,7 +501,7 @@ static Direction checkLadderClimb(GameState *state, int enemyX, int enemyY,
     for (int x = enemyX - searchRadius; x <= enemyX + searchRadius; x++) {
         if (x < 0 || x >= WIDTH) continue;
 
-        if (isClimbable(x, enemyY)) {
+        if (isClimbable(x, enemyY) && !isEnemyAt(state, x, enemyY, enemyIndex)) {
             int ladderDist = abs(x - enemyX) + abs(x - playerX);
             if (ladderDist < bestLadderDist) {
                 bestLadderDist = ladderDist;
@@ -495,15 +534,15 @@ static int shouldDropFromTightrope(GameState *state, int enemyX, int enemyY,
 }
 
 static Direction checkHorizontalPath(GameState *state, int enemyX, int enemyY,
-                                     int playerX) {
+                                     int playerX, int enemyIndex) {
     if (enemyX < playerX) {
         for (int x = enemyX + 1; x <= playerX; x++) {
-            // if (!isWalkable(x, enemyY, state)) return NEUTRAL;
+
         }
         return RIGHT;
     } else if (enemyX > playerX) {
         for (int x = enemyX - 1; x >= playerX; x--) {
-            // if (!isWalkable(x, enemyY, state)) return NEUTRAL;
+
         }
         return LEFT;
     }
@@ -512,7 +551,7 @@ static Direction checkHorizontalPath(GameState *state, int enemyX, int enemyY,
 }
 
 static Direction breakOscillation(GameState *state, int enemyX, int enemyY,
-                                  int playerX) {
+                                  int playerX, int enemyIndex) {
     if (playerX < enemyX && isWalkable(enemyX - 1, enemyY, state)) {
         return LEFT;
     } else if (playerX > enemyX && isWalkable(enemyX + 1, enemyY, state)) {
@@ -564,7 +603,7 @@ static Direction findBestLadder(GameState *state, int enemyX, int enemyY,
             continue;
         }
 
-        if (isClimbable(x, enemyY)) {
+        if (isClimbable(x, enemyY) && !isEnemyAt(state, x, enemyY, enemyIndex)) {
             if (verticalDir == UP && enemyY > 0 && isClimbable(x, enemyY - 1)) {
                 int dist = abs(x - enemyX) + abs(x - playerX);
                 if (dist < bestLadderDistance) {
@@ -613,7 +652,7 @@ static Direction findBestLadder(GameState *state, int enemyX, int enemyY,
 }
 
 static Direction checkLadderExit(GameState *state, int enemyX, int enemyY,
-                                 int playerX, int playerY) {
+                                 int playerX, int playerY, int enemyIndex) {
     if (enemyX < playerX) {
         if (isWalkable(enemyX + 1, enemyY, state) &&
             (supports(enemyX + 1, enemyY, state) ||
@@ -643,17 +682,19 @@ static Direction moveCloserHorizontally(GameState *state, int enemyX,
     int horizontalDistance = playerX - enemyX;
     Direction horizontalDir = NEUTRAL;
 
-    if (horizontalDistance < 0 && isWalkable(enemyX - 1, enemyY, state) &&
-        (supports(enemyX - 1, enemyY, state) ||
-         isOnTightrope(enemyX - 1, enemyY) ||
-         isClimbable(enemyX - 1, enemyY))) {
-        horizontalDir = LEFT;
-    } else if (horizontalDistance > 0 &&
-               isWalkable(enemyX + 1, enemyY, state) &&
-               (supports(enemyX + 1, enemyY, state) ||
+        if (horizontalDistance < 0 && isWalkable(enemyX - 1, enemyY, state) &&
+            !isEnemyAt(state, enemyX - 1, enemyY, enemyIndex) &&
+            (supports(enemyX - 1, enemyY, state) ||
+            isOnTightrope(enemyX - 1, enemyY) ||
+            isClimbable(enemyX - 1, enemyY))) {
+            horizontalDir = LEFT;
+            } else if (horizontalDistance > 0 &&
+                isWalkable(enemyX + 1, enemyY, state) &&
+                !isEnemyAt(state, enemyX + 1, enemyY, enemyIndex) &&
+                (supports(enemyX + 1, enemyY, state) ||
                 isOnTightrope(enemyX + 1, enemyY) ||
                 isClimbable(enemyX + 1, enemyY))) {
-        horizontalDir = RIGHT;
+                horizontalDir = RIGHT;
     }
 
     if (preventBacktracking &&
@@ -691,6 +732,7 @@ static Direction tryAnySafeDirection(GameState *state, int enemyX, int enemyY,
 
         if (newX >= 0 && newX < WIDTH && newY >= 0 && newY < HEIGHT &&
             isWalkable(newX, newY, state) &&
+            !isEnemyAt(state, newX, newY, enemyIndex) &&
             (testDir == UP || testDir == DOWN
                  ? isClimbable(enemyX, enemyY)
                  : (supports(newX, newY, state) || isOnTightrope(newX, newY) ||
@@ -742,4 +784,61 @@ void updateEnemyHoleTimers(GameState *state) {
             enemy->inHole = 0;
         }
     }
+}
+
+void updateEnemyHoleEscape(GameState *state) {
+    os_t currentTime = os_read_monotonic_time();
+
+    for (int i = 0; i < state->enemyCount; i++) {
+        Entity *enemy = &state->enemies[i];
+
+        if (enemy->inHole && enemyHoleStartTime[i] == 0) {
+            enemyHoleStartTime[i] = currentTime;
+            enemyHoleEscapeTime[i] = MIN_HOLE_ESCAPE_TIME + (rand() % (MAX_HOLE_ESCAPE_TIME - MIN_HOLE_ESCAPE_TIME + 1));
+        }
+
+        if (!enemy->inHole) {
+            enemyHoleStartTime[i] = 0;
+            continue;
+        }
+
+        if (enemyHoleStartTime[i] != 0 && 
+            (currentTime - enemyHoleStartTime[i]) >= enemyHoleEscapeTime[i]) {
+
+            if (rand() % 2 == 0) {
+
+                int escapeX = enemy->tileX;
+                int escapeY = enemy->tileY - 1; 
+
+                if (escapeY >= 0 && isWalkable(escapeX, escapeY, state)) {
+
+                    enemy->visualX = (float)escapeX;
+                    enemy->visualY = (float)escapeY;
+                    enemy->targetX = (float)escapeX;
+                    enemy->targetY = (float)escapeY;
+                    updateLogicalPosition(enemy);
+
+                    enemy->inHole = 0;
+                    enemyHoleStartTime[i] = 0;
+
+                    enemyEscapeImmunity[i] = ESCAPE_IMMUNITY_MOVES;
+
+                    enemyEscapedFromHole[i] = 1;
+                }
+            }
+
+            enemyHoleStartTime[i] = currentTime;
+        }
+    }
+}
+
+static int isEnemyAt(GameState *state, int x, int y, int excludeIndex) {
+    for (int i = 0; i < state->enemyCount; i++) {
+        if (i == excludeIndex) continue;
+        Entity *enemy = &state->enemies[i];
+        if (enemy->tileX == x && enemy->tileY == y && !enemy->inHole) {
+            return 1;
+        }
+    }
+    return 0;
 }
