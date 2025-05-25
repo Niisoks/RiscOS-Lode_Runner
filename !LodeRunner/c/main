@@ -168,6 +168,7 @@ void initialiseGame(GameState *state) {
 
     initialiseAnimStates();
     initialiseEnemyHoleData();
+    initializeDiggingSystem();
 
     state->goldCollected = 0;
     countGold(state);
@@ -293,14 +294,19 @@ void updateGame(void *ws) {
             }
         }
     }
+    
     updateMovementAnimation(state);
     updateAnimationFrames(state); 
     if (!state->player.isMoving) {
         applyGravity(state);
     }
     updateEnemyAI(state);  
+    checkEnemyDigInterference(state);
+    updateDiggingAnimations(state);
+    updateRegenerationAnimations(state);
+    
     updateHoleTimers(state);
-    updateEnemyHoleEscape(state); // ADD THIS LINE
+    updateEnemyHoleEscape(state);
     checkForGold(state);
 
     if (checkCollision(state)) {  
@@ -314,7 +320,7 @@ void updateGame(void *ws) {
             markLevelCompleted(levelNumber);
         }
         setCenteredMessage("level complete!\nreturning to menu...");
-        setTimer(10, (void(*)(void*))showMenu, NULL);
+        setTimer(120, (void(*)(void*))showMenu, NULL);
         return;
     }
 
@@ -322,6 +328,7 @@ void updateGame(void *ws) {
 
     setTimer(4, updateGame, ws);
 }
+
 
 void exitGame(void) {
     if (block) {
