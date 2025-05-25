@@ -15,6 +15,7 @@ MenuState menuState;
 osspriteop_header *selectorSprite;
 osspriteop_header *logoSprite;
 osspriteop_header *bluesquareSprite;
+osspriteop_header *greenTickSprite;
 
 void initialiseMenu(void) {
     menuState.levelCount = 0;
@@ -31,6 +32,9 @@ void initialiseMenu(void) {
 
     xosspriteop_select_sprite(osspriteop_USER_AREA, spriteArea, 
                               (osspriteop_id)"bluesquare", &bluesquareSprite);
+    
+    xosspriteop_select_sprite(osspriteop_USER_AREA, spriteArea, 
+                              (osspriteop_id)"greentick", &greenTickSprite);
     
     loadLevelList();
 }
@@ -117,6 +121,20 @@ void renderMenu(int baseX, int baseY) {
         int itemY = listStartY - (listIndex * (TILE_SIZE));
         int textX = baseX;
         int selectorX = renderTextCentered(menuState.levels[i].displayName, textX, itemY);
+        
+        if (strncmp(menuState.levels[i].filename, "level", 5) == 0) {
+            int levelNumber = atoi(menuState.levels[i].filename + 5);
+            if (isLevelCompleted(levelNumber)) {
+                int tickX = selectorX + (160 * getGameSize());
+                xosspriteop_put_sprite_scaled(
+                    osspriteop_PTR, spriteArea, (osspriteop_id)greenTickSprite,
+                    tickX, itemY,
+                    os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES | osspriteop_USE_MASK,
+                    &factors, transTab
+                );
+            }
+        }
+        
         if (listIndex == menuState.selectedIndex) {
             selectorX = selectorX - 60;
             xosspriteop_put_sprite_scaled(
