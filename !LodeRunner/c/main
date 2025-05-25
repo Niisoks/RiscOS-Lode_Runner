@@ -350,6 +350,10 @@ void loadLevel(int level) {
 void loadLevelFromPath(const char *levelPath) {
     drawBlackSquaresOnScreen();
 
+    showCenteredMessage = 0;
+    centeredMessage[0] = ' ';
+    centeredMessageTimer = 0;
+
     const char *filename = strrchr(levelPath, '.');
     if (filename) {
         filename++; 
