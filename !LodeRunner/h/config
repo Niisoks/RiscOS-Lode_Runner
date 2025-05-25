@@ -10,6 +10,8 @@
 
 extern int currentGameSize;
 extern int completedLevels[MAX_COMPLETED_LEVELS];
+extern int lastMenuPage;
+extern int lastMenuSelection;
 
 int loadConfig(void);
 int saveConfig(void);
