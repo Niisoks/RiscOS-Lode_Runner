@@ -49,6 +49,11 @@ void render(wimp_draw *draw, osbool more) {
                         case '.': sprite = holeSprite; break;
                         case '-': sprite = tightropeSprite; break;
                         case 'S': sprite = stoneSprite; break;
+                        case 'W': 
+                            if (state->goldCollected >= state->goldTotal) {
+                                sprite = ladderSprite;
+                            }
+                            break;
                         case 'P':
                         case 'E':
                             map[y][x] = ' '; 
@@ -163,7 +168,7 @@ int isWalkable(int x, int y, GameState *state) {
         }
     }
 
-    return (tile == ' ' || tile == 'G' || tile == 'H' || tile == '.' || tile == '-');
+    return (tile == ' ' || tile == 'G' || tile == 'H' || tile == '.' || tile == '-' || tile == 'W');
 }
 
 int isOnTightrope(int x, int y) {
@@ -174,7 +179,13 @@ int isClimbable(int x, int y) {
     if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT)
         return 0;
 
-    return (map[y][x] == 'H');
+    if (map[y][x] == 'H') return 1;
+    
+    if (map[y][x] == 'W' && gameState.goldCollected >= gameState.goldTotal) {
+        return 1;
+    }
+    
+    return 0;
 }
 
 int isSolid(int x, int y) {

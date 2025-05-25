@@ -8,7 +8,7 @@
 #include "config.h"
 
 char map[HEIGHT][WIDTH + 1];
-char currentLevelName[256] = "unknown";
+char currentLevelName[20] = "unknown";
 
 int loadMapFromFile(const char *filename) {
     FILE *file = fopen(filename, "r");
@@ -26,28 +26,27 @@ int loadMapFromFile(const char *filename) {
         map[mapY][WIDTH] = '\0';
     }
 
-    for (int borderY = 0; borderY < HEIGHT; borderY++) {
-        map[borderY][0] = 'S';
-        map[borderY][WIDTH-1] = 'S';
+    for (int x = 0; x < WIDTH; x++) {
+        map[HEIGHT-1][x] = 'S'; 
+    }
+    for (int y = 0; y < HEIGHT; y++) {
+        map[y][0] = 'S';        
+        map[y][WIDTH-1] = 'S';  
     }
 
-    while (y < 15 && fgets(buffer, sizeof(buffer), file)) {
+    while (y < 16 && fgets(buffer, sizeof(buffer), file)) {
         char *newline = strchr(buffer, '\n');
         if (newline) *newline = '\0';
         newline = strchr(buffer, '\r');
         if (newline) *newline = '\0';
 
         int len = strlen(buffer);
-        
-        for (int x = 0; x < 20 && x < len; x++) {
-            map[y][x+1] = buffer[x];
+
+        for (int x = 0; x < 28 && x < len; x++) {
+            map[y][x+1] = buffer[x]; 
         }
 
         y++;
-    }
-
-    for (int x = 0; x < WIDTH; x++) {
-        map[y][x] = 'S';
     }
 
     fclose(file);
@@ -307,10 +306,19 @@ void updateGame(void *ws) {
         setCenteredMessage("game over.\npress q for menu");
     }
 
-    if (state->goldCollected >= state->goldTotal) {
-        setTimer(120, (void(*)(void*))showMenu, NULL);  
+    if (isAtWinPosition(state)) {
+        setCenteredMessage("level complete!\nreturning to menu...");
+        setTimer(120, (void(*)(void*))showMenu, NULL);
         return;
     }
+
+    // Show message when all gold collected but haven't reached exit yet
+    // if (state->goldCollected >= state->goldTotal && !isAtWinPosition(state)) {
+    //     static int messageShown = 0;
+    //     if (!messageShown) {
+    //         messageShown = 1;
+    //     }
+    // }
 
     updateWindow(gameWindow);
 
@@ -363,24 +371,27 @@ void loadLevelFromPath(const char *levelPath) {
     int mapLoaded = loadMapFromFile(levelPath);
 
     if (!mapLoaded) {
+        // Updated default map for new dimensions (28x16 playable area)
         const char* defaultMap[] = {
-            "P  G    H   G       ",
-            "  H###H###H#####    ",
-            "  H#  H  #H         ",
-            "  H# #H# #H  ###### ",
-            "  H# #H# #H    G    ",
-            " #H# #H# #####H#    ",
-            "  H   H#---G  H     ",
-            "  H   H     HE##### ",
-            "  H   H-----H#      ",
-            "  H --H             ",
-            "  H   H    ##H      ",
-            "  H   H      H      ",
-            "  H   H      H      ",
-            "  H   H      H      ",
-            "GGGGGGGGGGGGGGGGGGGG"   
+            "                            ",  // 28 characters wide
+            "P  G    H   G               ",
+            "  H###H###H#####            ",
+            "  H#  H  #H                 ",
+            "  H# #H# #H  ##########     ",
+            "  H# #H# #H    G            ",
+            " #H# #H# #####H#            ",
+            "  H   H#---G  H             ",
+            "  H   H     HE#########     ",
+            "  H   H-----H#              ",
+            "  H --H                     ",
+            "  H   H    ##H              ",
+            "  H   H      H              ",
+            "  H   H      H              ",
+            "  H   H      H              ",
+            "GGGGGGGGGGGGGGGGGGGGGGGGGGGG"   // 28 G's for bottom row
         };
 
+        // Initialize map with spaces
         for (int y = 0; y < HEIGHT; y++) {
             for (int x = 0; x < WIDTH; x++) {
                 map[y][x] = ' ';
@@ -388,21 +399,23 @@ void loadLevelFromPath(const char *levelPath) {
             map[y][WIDTH] = '\0';
         }
 
+        // Add stone borders
         for (int x = 0; x < WIDTH; x++) {
-            map[HEIGHT-1][x] = 'S'; 
+            map[HEIGHT-1][x] = 'S'; // Bottom border
         }
         for (int y = 0; y < HEIGHT; y++) {
-            map[y][0] = 'S';        
-            map[y][WIDTH-1] = 'S';  
+            map[y][0] = 'S';        // Left border
+            map[y][WIDTH-1] = 'S';  // Right border
         }
 
-        for (int y = 0; y < 15; y++) {
+        // Copy default map content, with border offset
+        for (int y = 0; y < 16; y++) {
             int len = strlen(defaultMap[y]);
-            for (int x = 0; x < 20 && x < len; x++) {
-                map[y+1][x+1] = defaultMap[y][x]; 
+            for (int x = 0; x < 28 && x < len; x++) {
+                map[y][x+1] = defaultMap[y][x]; // x+1 for left border
             }
         }
-
+        
         strcpy(currentLevelName, "default");
     }
 

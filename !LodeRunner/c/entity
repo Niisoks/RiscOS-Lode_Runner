@@ -437,3 +437,12 @@ void updateHoleTimers(GameState *state) {
     // Update enemy hole states
     updateEnemyHoleTimers(state);
 }
+
+int isAtWinPosition(GameState *state) {
+    Entity *player = &state->player;
+    
+    if (state->goldCollected >= state->goldTotal && player->tileY == 0) {
+        return 1;
+    }
+    return 0;
+}
