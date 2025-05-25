@@ -42,22 +42,40 @@ void render(wimp_draw *draw, osbool more) {
                     int screenY = baseY - (y * tileSize);
                     osspriteop_header *sprite = NULL;
 
-                    switch (map[y][x]) {
-                        case '#': sprite = wallSprite; break;
-                        case 'H': sprite = ladderSprite; break;
-                        case 'G': sprite = goldSprite; break;
-                        case '.': sprite = holeSprite; break;
-                        case '-': sprite = tightropeSprite; break;
-                        case 'S': sprite = stoneSprite; break;
-                        case 'W': 
-                            if (state->goldCollected >= state->goldTotal) {
-                                sprite = ladderSprite;
-                            }
-                            break;
-                        case 'P':
-                        case 'E':
-                            map[y][x] = ' '; 
-                            break;
+                    if (digStates[y][x] > DIG_STATE_NONE && digStates[y][x] < DIG_STATE_HOLE) {
+                        switch (digStates[y][x]) {
+                            case DIG_STATE_FRAME1: sprite = digAnim1Sprite; break;
+                            case DIG_STATE_FRAME2: sprite = digAnim2Sprite; break;
+                            case DIG_STATE_FRAME3: sprite = digAnim3Sprite; break;
+                            case DIG_STATE_FRAME4: sprite = digAnim4Sprite; break;
+                        }
+                    }
+
+                    else if (regenStates[y][x] > REGEN_STATE_NONE && regenStates[y][x] < REGEN_STATE_WALL) {
+                        switch (regenStates[y][x]) {
+                            case REGEN_STATE_FRAME1: sprite = regenAnim1Sprite; break;
+                            case REGEN_STATE_FRAME2: sprite = regenAnim2Sprite; break;
+                            case REGEN_STATE_FRAME3: sprite = regenAnim3Sprite; break;
+                            case REGEN_STATE_FRAME4: sprite = regenAnim4Sprite; break;
+                        }
+                    } else{
+                        switch (map[y][x]) {
+                            case '#': sprite = wallSprite; break;
+                            case 'H': sprite = ladderSprite; break;
+                            case 'G': sprite = goldSprite; break;
+                            case '.': sprite = holeSprite; break;
+                            case '-': sprite = tightropeSprite; break;
+                            case 'S': sprite = stoneSprite; break;
+                            case 'W': 
+                                if (state->goldCollected >= state->goldTotal) {
+                                    sprite = ladderSprite;
+                                }
+                                break;
+                            case 'P':
+                            case 'E':
+                                map[y][x] = ' '; 
+                                break;
+                        }
                     }
 
                     if (sprite != NULL) {

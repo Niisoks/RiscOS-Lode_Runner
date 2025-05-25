@@ -16,12 +16,32 @@ typedef enum {
     DOWN = 4
 } Direction;
 
+typedef enum {
+    DIG_STATE_NONE = 0,
+    DIG_STATE_FRAME1 = 1,
+    DIG_STATE_FRAME2 = 2, 
+    DIG_STATE_FRAME3 = 3,
+    DIG_STATE_FRAME4 = 4,
+    DIG_STATE_HOLE = 5
+} DigState;
+
+typedef enum {
+    REGEN_STATE_NONE = 0,
+    REGEN_STATE_FRAME1 = 1,
+    REGEN_STATE_FRAME2 = 2,
+    REGEN_STATE_FRAME3 = 3, 
+    REGEN_STATE_FRAME4 = 4,
+    REGEN_STATE_WALL = 5
+} RegenState;
+
 #define GAME_SIZE getGameSize()
 #define WIDTH 30
 #define HEIGHT 17
 #define TILE_SIZE (32 * GAME_SIZE)
 #define HOLE_REGENERATION_TIME 700
 #define WALL_PADDING 0.0f
+#define DIG_ANIM_FRAMES_PER_STAGE 5
+#define REGEN_ANIM_FRAMES_PER_STAGE 8
 
 typedef struct {
     int tileX, tileY;
@@ -34,6 +54,7 @@ typedef struct {
     int isDigging;
     int digDirection;
     int digTimer;
+    int digX, digY;
     float prevVisualX, prevVisualY;
     int hasMoved;
 } Entity;
@@ -65,6 +86,11 @@ extern os_t holeTimer[HEIGHT][WIDTH];
 extern int dug[HEIGHT][WIDTH];
 extern int playerIsFalling;
 
+extern DigState digStates[HEIGHT][WIDTH];
+extern int digAnimTimers[HEIGHT][WIDTH];
+extern RegenState regenStates[HEIGHT][WIDTH];  
+extern int regenAnimTimers[HEIGHT][WIDTH];
+
 extern AnimationState playerAnim;
 extern GameState gameState;
 
@@ -83,6 +109,8 @@ extern osspriteop_header *enemyRopeSprite1, *enemyRopeSprite2, *enemyRopeSprite3
 extern osspriteop_header *enemySprite1f, *enemySprite2f, *enemySprite3f, *enemySprite4f;
 extern osspriteop_header *enemyRopeSprite1f, *enemyRopeSprite2f, *enemyRopeSprite3f, *enemyRopeSprite4f;
 extern osspriteop_header *wallSprite, *ladderSprite, *goldSprite, *holeSprite, *tightropeSprite;
+extern osspriteop_header *digAnim1Sprite, *digAnim2Sprite, *digAnim3Sprite, *digAnim4Sprite;
+extern osspriteop_header *regenAnim1Sprite, *regenAnim2Sprite, *regenAnim3Sprite, *regenAnim4Sprite;
 extern os_factors factors;
 extern osspriteop_area *spriteArea;
 extern osspriteop_header *blackSquareSprite;
@@ -109,5 +137,8 @@ void updateAnimationFrames(GameState *state);
 void applyGravity(GameState *state);
 int checkCollision(GameState *state);
 int isAtWinPosition(GameState *state);
+void updateDiggingAnimations(GameState *state);
+void updateRegenerationAnimations(GameState *state);
+void checkWallCollisions(GameState *state);
 
 #endif

@@ -5,6 +5,10 @@
 #include <math.h>
 
 AnimationState playerAnim;
+DigState digStates[HEIGHT][WIDTH];
+int digAnimTimers[HEIGHT][WIDTH];
+RegenState regenStates[HEIGHT][WIDTH];
+int regenAnimTimers[HEIGHT][WIDTH];
 
 void initialiseAnimStates(void) {
     initialisePlayerAnimState();
@@ -19,6 +23,17 @@ void initialisePlayerAnimState(void) {
     playerAnim.lastWalkFrame = 0;
     playerAnim.lastClimbFrame = 0;
     playerAnim.lastRopeFrame = 0;
+}
+
+void initializeDiggingSystem(void) {
+    for (int y = 0; y < HEIGHT; y++) {
+        for (int x = 0; x < WIDTH; x++) {
+            digStates[y][x] = DIG_STATE_NONE;
+            digAnimTimers[y][x] = 0;
+            regenStates[y][x] = REGEN_STATE_NONE;
+            regenAnimTimers[y][x] = 0;
+        }
+    }
 }
 
 void updateAnimationFrames(GameState *state) {
@@ -409,17 +424,61 @@ void dig(GameState *state, int dx, int isFlipped) {
     int y = player->tileY + 1;
 
     if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT && map[y][x] == '#') {
-        map[y][x] = '.';
-        holeTimer[y][x] = os_read_monotonic_time();
-        dug[y][x] = 1;
-
+        digStates[y][x] = DIG_STATE_FRAME1;
+        digAnimTimers[y][x] = 0;
+        
         player->isDigging = 1;
         player->digDirection = isFlipped ? 1 : -1;
-        player->digTimer = 20; 
+        player->digTimer = DIG_ANIM_FRAMES_PER_STAGE * 4;
+        player->digX = x;
+        player->digY = y;
     }
 }
 
+void updateDiggingAnimations(GameState *state) {
+    for (int y = 0; y < HEIGHT; y++) {
+        for (int x = 0; x < WIDTH; x++) {
+            if (digStates[y][x] != DIG_STATE_NONE && digStates[y][x] != DIG_STATE_HOLE) {
+                digAnimTimers[y][x]++;
+                
+                if (digAnimTimers[y][x] >= DIG_ANIM_FRAMES_PER_STAGE) {
+                    digAnimTimers[y][x] = 0;
+                    digStates[y][x]++;
+                    
+                    if (digStates[y][x] > DIG_STATE_FRAME4) {
+                        map[y][x] = '.';
+                        holeTimer[y][x] = os_read_monotonic_time();
+                        dug[y][x] = 1;
+                        digStates[y][x] = DIG_STATE_HOLE;
+                    }
+                }
+            }
+        }
+    }
+}
 
+void updateRegenerationAnimations(GameState *state) {
+    for (int y = 0; y < HEIGHT; y++) {
+        for (int x = 0; x < WIDTH; x++) {
+            if (regenStates[y][x] != REGEN_STATE_NONE && regenStates[y][x] != REGEN_STATE_WALL) {
+                regenAnimTimers[y][x]++;
+                
+                if (regenAnimTimers[y][x] >= REGEN_ANIM_FRAMES_PER_STAGE) {
+                    regenAnimTimers[y][x] = 0;
+                    regenStates[y][x]++;
+                    
+                    if (regenStates[y][x] > REGEN_STATE_FRAME4) {
+                        map[y][x] = '#';
+                        holeTimer[y][x] = 0;
+                        dug[y][x] = 0;
+                        regenStates[y][x] = REGEN_STATE_WALL;
+                        checkWallCollisions(state);
+                    }
+                }
+            }
+        }
+    }
+}
 
 int findSafePosition(int x, int y, int *newX, int *newY) {
     int dx[] = {0, -1, 1, 0, -1, -1, 1, 1};
@@ -470,12 +529,13 @@ void updateHoleTimers(GameState *state) {
                         continue;
                     }
 
+                    int anyoneInHole = 0;
+
                     if (state->player.inHole && state->player.tileX == x && state->player.tileY == y) {
                         int newX, newY;
                         if (findSafePosition(x, y, &newX, &newY)) {
                             state->player.visualX = newX;
                             state->player.visualY = newY;
-
                             state->player.targetX = newX;
                             state->player.targetY = newY;
                             updateLogicalPosition(&state->player);
@@ -483,8 +543,7 @@ void updateHoleTimers(GameState *state) {
                             state->player.isMoving = 1; 
                             state->player.moveDir = UP; 
                         } else {
-                            holeTimer[y][x] = currentTime;
-                            continue;
+                            anyoneInHole = 1;
                         }
                     }
 
@@ -495,7 +554,6 @@ void updateHoleTimers(GameState *state) {
                             if (findSafePosition(x, y, &newX, &newY)) {
                                 enemy->visualX = newX;
                                 enemy->visualY = newY;
-
                                 enemy->targetX = newX;
                                 enemy->targetY = newY;
                                 updateLogicalPosition(enemy);
@@ -503,15 +561,23 @@ void updateHoleTimers(GameState *state) {
                                 enemy->isMoving = 1; 
                                 enemy->moveDir = UP; 
                             } else {
-                                holeTimer[y][x] = currentTime;
-                                continue;
+                                anyoneInHole = 1;
                             }
                         }
                     }
 
-                    map[y][x] = '#';
-                    holeTimer[y][x] = 0;
-                    dug[y][x] = 0;
+                    if (!anyoneInHole) {
+
+                        regenStates[y][x] = REGEN_STATE_FRAME1;
+                        regenAnimTimers[y][x] = 0;
+
+                        holeTimer[y][x] = 0;
+                        dug[y][x] = 0;
+                        digStates[y][x] = DIG_STATE_NONE;
+                    } else {
+
+                        holeTimer[y][x] = currentTime;
+                    }
                 }
             }
         }
@@ -534,4 +600,25 @@ int isAtWinPosition(GameState *state) {
         return 1;
     }
     return 0;
+}
+
+void checkWallCollisions(GameState *state) {
+    Entity *player = &state->player;
+    if (map[player->tileY][player->tileX] == '#') {
+        state->gameOver = 1;
+        setCenteredMessage("crushed by wall!\npress q for menu");
+        return;
+    }
+    
+    for (int i = 0; i < state->enemyCount; i++) {
+        Entity *enemy = &state->enemies[i];
+        
+        if (map[enemy->tileY][enemy->tileX] == '#') {
+            enemy->tileY--;
+            enemy->visualY = (float)enemy->tileY;
+            enemy->targetY = (float)enemy->tileY;
+            enemy->isMoving = 0;
+            enemy->inHole = 0;
+        }
+    }
 }
