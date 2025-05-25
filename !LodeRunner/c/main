@@ -220,7 +220,7 @@ void processKeyPress(int keyCode, GameState *state) {
             break;
         case 'q':
         case 'Q':
-            setTimer(10, (void(*)(void*))showMenu, NULL);  
+            setTimer(1, (void(*)(void*))showMenu, NULL);  
             return;
     }
 }
@@ -301,7 +301,6 @@ void updateGame(void *ws) {
         applyGravity(state);
     }
     updateEnemyAI(state);  
-    checkEnemyDigInterference(state);
     updateDiggingAnimations(state);
     updateRegenerationAnimations(state);
     
@@ -315,13 +314,12 @@ void updateGame(void *ws) {
     }
 
     if (isAtWinPosition(state)) {
+        state->gameOver = 1;
+        setCenteredMessage("level complete!\npress q for menu");
         if (strncmp(currentLevelName, "level", 5) == 0) {
             int levelNumber = atoi(currentLevelName + 5);
             markLevelCompleted(levelNumber);
         }
-        setCenteredMessage("level complete!\nreturning to menu...");
-        setTimer(120, (void(*)(void*))showMenu, NULL);
-        return;
     }
 
     updateWindow(gameWindow);

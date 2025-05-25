@@ -457,30 +457,6 @@ void updateDiggingAnimations(GameState *state) {
     }
 }
 
-void cancelDigging(GameState *state, int x, int y) {
-    debugPrint("Cancelling dig at %d,%d - was state %d", x, y, digStates[y][x]);
-    
-    // Reset digging animation state
-    digStates[y][x] = DIG_STATE_NONE;
-    digAnimTimers[y][x] = 0;
-    
-    // IMPORTANT: Reset the map back to wall
-    map[y][x] = '#';
-    
-    // Clear any hole-related state
-    holeTimer[y][x] = 0;
-    dug[y][x] = 0;
-    
-    // Cancel player's digging state
-    if (state->player.isDigging && state->player.digX == x && state->player.digY == y) {
-        debugPrint("Cancelling player dig action");
-        state->player.isDigging = 0;
-        state->player.digTimer = 0;
-    }
-    
-    debugPrint("Dig cancelled - map[%d][%d] = '%c', digState = %d", y, x, map[y][x], digStates[y][x]);
-}
-
 void updateRegenerationAnimations(GameState *state) {
     for (int y = 0; y < HEIGHT; y++) {
         for (int x = 0; x < WIDTH; x++) {
@@ -496,46 +472,12 @@ void updateRegenerationAnimations(GameState *state) {
                         holeTimer[y][x] = 0;
                         dug[y][x] = 0;
                         regenStates[y][x] = REGEN_STATE_WALL;
+                        checkWallCollisions(state);
                     }
                 }
             }
         }
     }
-}
-
-int checkEnemyDigInterference(GameState *state) {
-    for (int y = 0; y < HEIGHT; y++) {
-        for (int x = 0; x < WIDTH; x++) {
-            if (digStates[y][x] > DIG_STATE_NONE && digStates[y][x] < DIG_STATE_HOLE) {
-                
-                for (int i = 0; i < state->enemyCount; i++) {
-                    Entity *enemy = &state->enemies[i];
-                    
-                    if (enemy->tileX == x && enemy->tileY == y) {
-                        cancelDigging(state, x, y);
-                        return 1;
-                    }
-                    
-                    if (enemy->isMoving) {
-                        int targetTileX = (int)round(enemy->targetX);
-                        int targetTileY = (int)round(enemy->targetY);
-                        if (targetTileX == x && targetTileY == y) {
-                            cancelDigging(state, x, y);
-                            return 1;
-                        }
-                    }
-                    
-                    int visualTileX = (int)round(enemy->visualX);
-                    int visualTileY = (int)round(enemy->visualY);
-                    if (visualTileX == x && visualTileY == y) {
-                        cancelDigging(state, x, y);
-                        return 1;
-                    }
-                }
-            }
-        }
-    }
-    return 0;
 }
 
 int findSafePosition(int x, int y, int *newX, int *newY) {
@@ -658,4 +600,25 @@ int isAtWinPosition(GameState *state) {
         return 1;
     }
     return 0;
+}
+
+void checkWallCollisions(GameState *state) {
+    Entity *player = &state->player;
+    if (map[player->tileY][player->tileX] == '#') {
+        state->gameOver = 1;
+        setCenteredMessage("crushed by wall!\npress q for menu");
+        return;
+    }
+    
+    for (int i = 0; i < state->enemyCount; i++) {
+        Entity *enemy = &state->enemies[i];
+        
+        if (map[enemy->tileY][enemy->tileX] == '#') {
+            enemy->tileY--;
+            enemy->visualY = (float)enemy->tileY;
+            enemy->targetY = (float)enemy->tileY;
+            enemy->isMoving = 0;
+            enemy->inHole = 0;
+        }
+    }
 }

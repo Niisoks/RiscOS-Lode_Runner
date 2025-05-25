@@ -139,6 +139,6 @@ int checkCollision(GameState *state);
 int isAtWinPosition(GameState *state);
 void updateDiggingAnimations(GameState *state);
 void updateRegenerationAnimations(GameState *state);
-void cancelDigging(GameState *state, int x, int y);
+void checkWallCollisions(GameState *state);
 
 #endif
