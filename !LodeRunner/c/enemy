@@ -99,9 +99,22 @@ void updateEnemyAnimationFrames(GameState *state) {
     }
 }
 
-osspriteop_header *getEnemySprite(Entity *enemy, GameState *state,
-                                  int entityIndex) {
+osspriteop_header* getEnemySprite(Entity *enemy, GameState *state, int entityIndex) {
     AnimationState *anim = &enemyAnims[entityIndex];
+
+    int facingLeft = 0;
+
+    if (enemy->moveDir == LEFT) {
+        facingLeft = 1;
+        lastEnemyDirections[entityIndex] = LEFT;
+    } else if (enemy->moveDir == RIGHT) {
+        facingLeft = 0;
+        lastEnemyDirections[entityIndex] = RIGHT;
+    } else {
+
+        facingLeft = (lastEnemyDirections[entityIndex] == LEFT);
+    }
+
     if (enemy->inHole) {
         return enemyFallSprite2;
     }
@@ -113,48 +126,60 @@ osspriteop_header *getEnemySprite(Entity *enemy, GameState *state,
 
     if (isOnTightrope(enemy->tileX, enemy->tileY)) {
         int frame = enemy->isMoving ? anim->ropeFrame : anim->lastRopeFrame;
-        switch (frame) {
-            case 0:
-                return enemyRopeSprite1;
-            case 1:
-                return enemyRopeSprite2;
-            case 2:
-                return enemyRopeSprite3;
-            case 3:
-                return enemyRopeSprite4;
-            default:
-                return enemyRopeSprite1;
+
+        if (facingLeft) {
+
+            switch (frame) {
+                case 0: return enemyRopeSprite1;
+                case 1: return enemyRopeSprite2;
+                case 2: return enemyRopeSprite3;
+                case 3: return enemyRopeSprite4;
+                default: return enemyRopeSprite1;
+            }
+        } else {
+
+            switch (frame) {
+                case 0: return enemyRopeSprite1f;
+                case 1: return enemyRopeSprite2f;
+                case 2: return enemyRopeSprite3f;
+                case 3: return enemyRopeSprite4f;
+                default: return enemyRopeSprite1f;
+            }
         }
     }
 
     if (isClimbable(enemy->tileX, enemy->tileY)) {
+
         int frame = enemy->isMoving ? anim->climbFrame : anim->lastClimbFrame;
         switch (frame) {
-            case 0:
-                return enemyClimbSprite1;
-            case 1:
-                return enemyClimbSprite2;
-            case 2:
-                return enemyClimbSprite3;
-            case 3:
-                return enemyClimbSprite4;
-            default:
-                return enemyClimbSprite1;
+            case 0: return enemyClimbSprite1;
+            case 1: return enemyClimbSprite2;
+            case 2: return enemyClimbSprite3;
+            case 3: return enemyClimbSprite4;
+            default: return enemyClimbSprite1;
         }
     }
 
     int frame = enemy->isMoving ? anim->walkFrame : anim->lastWalkFrame;
-    switch (frame) {
-        case 0:
-            return enemySprite1;
-        case 1:
-            return enemySprite2;
-        case 2:
-            return enemySprite3;
-        case 3:
-            return enemySprite4;
-        default:
-            return enemySprite1;
+
+    if (facingLeft) {
+
+        switch (frame) {
+            case 0: return enemySprite1;
+            case 1: return enemySprite2;
+            case 2: return enemySprite3;
+            case 3: return enemySprite4;
+            default: return enemySprite1;
+        }
+    } else {
+
+        switch (frame) {
+            case 0: return enemySprite1f;
+            case 1: return enemySprite2f;
+            case 2: return enemySprite3f;
+            case 3: return enemySprite4f;
+            default: return enemySprite1f;
+        }
     }
 }
 

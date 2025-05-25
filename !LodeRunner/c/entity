@@ -59,40 +59,86 @@ osspriteop_header* getEntitySprite(Entity *entity, GameState *state, int isPlaye
 
 osspriteop_header* getPlayerSprite(Entity *player, GameState *state) {
 
+    int facingLeft = 0;
+
+    if (player->moveDir == LEFT) {
+        facingLeft = 1;
+        player->lastDirection = LEFT;
+    } else if (player->moveDir == RIGHT) {
+        facingLeft = 0;
+        player->lastDirection = RIGHT;
+    } else {
+
+        facingLeft = (player->lastDirection == LEFT);
+    }
+
     if (player->isDigging) {
-        return (state->frame % 4 < 2) ? playerDigSprite1 : playerDigSprite2;
+        if (player->digDirection < 0) {
+
+            return (state->frame % 4 < 2) ? playerDigSprite1 : playerDigSprite2;
+        } else {
+
+            return (state->frame % 4 < 2) ? playerDigSprite1f : playerDigSprite2f;
+        }
     }
 
     if (playerIsFalling) {
+
         return (playerAnim.fallFrame == 0) ? playerFallSprite1 : playerFallSprite2;
     }
 
     if (isOnTightrope(player->tileX, player->tileY)) {
         if (player->isMoving && (player->moveDir == LEFT || player->moveDir == RIGHT)) {
-            switch (playerAnim.ropeFrame) {
-                case 0: return playerRopeSprite1;
-                case 1: return playerRopeSprite2;
-                case 2: return playerRopeSprite3;
-                case 3: return playerRopeSprite4;
+            if (facingLeft) {
+
+                switch (playerAnim.ropeFrame) {
+                    case 0: return playerRopeSprite1;
+                    case 1: return playerRopeSprite2;
+                    case 2: return playerRopeSprite3;
+                    case 3: return playerRopeSprite4;
+                    default: return playerRopeSprite1;
+                }
+            } else {
+
+                switch (playerAnim.ropeFrame) {
+                    case 0: return playerRopeSprite1f;
+                    case 1: return playerRopeSprite2f;
+                    case 2: return playerRopeSprite3f;
+                    case 3: return playerRopeSprite4f;
+                    default: return playerRopeSprite1f;
+                }
             }
         } else {
-            switch (playerAnim.lastRopeFrame) {
-                case 0: return playerRopeSprite1;
-                case 1: return playerRopeSprite2;
-                case 2: return playerRopeSprite3;
-                case 3: return playerRopeSprite4;
-                default: return playerRopeSprite1;
+
+            if (facingLeft) {
+                switch (playerAnim.lastRopeFrame) {
+                    case 0: return playerRopeSprite1;
+                    case 1: return playerRopeSprite2;
+                    case 2: return playerRopeSprite3;
+                    case 3: return playerRopeSprite4;
+                    default: return playerRopeSprite1;
+                }
+            } else {
+                switch (playerAnim.lastRopeFrame) {
+                    case 0: return playerRopeSprite1f;
+                    case 1: return playerRopeSprite2f;
+                    case 2: return playerRopeSprite3f;
+                    case 3: return playerRopeSprite4f;
+                    default: return playerRopeSprite1f;
+                }
             }
         }
     }
 
     if (isClimbable(player->tileX, player->tileY)) {
+
         if (player->isMoving && (player->moveDir == UP || player->moveDir == DOWN)) {
             switch (playerAnim.climbFrame) {
                 case 0: return playerClimbSprite1;
                 case 1: return playerClimbSprite2;
                 case 2: return playerClimbSprite3;
                 case 3: return playerClimbSprite4;
+                default: return playerClimbSprite1;
             }
         } else {
             switch (playerAnim.lastClimbFrame) {
@@ -106,19 +152,43 @@ osspriteop_header* getPlayerSprite(Entity *player, GameState *state) {
     }
 
     if (player->isMoving && (player->moveDir == LEFT || player->moveDir == RIGHT)) {
-        switch (playerAnim.walkFrame) {
-            case 0: return playerSprite1;
-            case 1: return playerSprite2;
-            case 2: return playerSprite3;
-            case 3: return playerSprite4;
+        if (facingLeft) {
+
+            switch (playerAnim.walkFrame) {
+                case 0: return playerSprite1;
+                case 1: return playerSprite2;
+                case 2: return playerSprite3;
+                case 3: return playerSprite4;
+                default: return playerSprite1;
+            }
+        } else {
+
+            switch (playerAnim.walkFrame) {
+                case 0: return playerSprite1f;
+                case 1: return playerSprite2f;
+                case 2: return playerSprite3f;
+                case 3: return playerSprite4f;
+                default: return playerSprite1f;
+            }
         }
     } else {
-        switch (playerAnim.lastWalkFrame) {
-            case 0: return playerSprite1;
-            case 1: return playerSprite2;
-            case 2: return playerSprite3;
-            case 3: return playerSprite4;
-            default: return playerSprite1;
+
+        if (facingLeft) {
+            switch (playerAnim.lastWalkFrame) {
+                case 0: return playerSprite1;
+                case 1: return playerSprite2;
+                case 2: return playerSprite3;
+                case 3: return playerSprite4;
+                default: return playerSprite1;
+            }
+        } else {
+            switch (playerAnim.lastWalkFrame) {
+                case 0: return playerSprite1f;
+                case 1: return playerSprite2f;
+                case 2: return playerSprite3f;
+                case 3: return playerSprite4f;
+                default: return playerSprite1f;
+            }
         }
     }
 
@@ -333,7 +403,7 @@ int checkCollision(GameState *state) {
     return checkEnemyCollisions(state);
 }
 
-void dig(GameState *state, int dx) {
+void dig(GameState *state, int dx, int isFlipped) {
     Entity *player = &state->player;
     int x = player->tileX + dx;
     int y = player->tileY + 1;
@@ -344,11 +414,11 @@ void dig(GameState *state, int dx) {
         dug[y][x] = 1;
 
         player->isDigging = 1;
-        player->digDirection = dx;
+        player->digDirection = isFlipped ? 1 : -1;
         player->digTimer = 20; 
     }
-
 }
+
 
 
 int findSafePosition(int x, int y, int *newX, int *newY) {
