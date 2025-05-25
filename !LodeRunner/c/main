@@ -309,6 +309,10 @@ void updateGame(void *ws) {
     }
 
     if (isAtWinPosition(state)) {
+        if (strncmp(currentLevelName, "level", 5) == 0) {
+            int levelNumber = atoi(currentLevelName + 5);
+            markLevelCompleted(levelNumber);
+        }
         setCenteredMessage("level complete!\nreturning to menu...");
         setTimer(120, (void(*)(void*))showMenu, NULL);
         return;
@@ -345,6 +349,10 @@ void loadLevel(int level) {
 
 void loadLevelFromPath(const char *levelPath) {
     drawBlackSquaresOnScreen();
+
+    showCenteredMessage = 0;
+    centeredMessage[0] = ' ';
+    centeredMessageTimer = 0;
 
     const char *filename = strrchr(levelPath, '.');
     if (filename) {
@@ -418,6 +426,7 @@ void loadLevelFromPath(const char *levelPath) {
 
 int main(void) {
     loadConfig();
+    loadSaveFile();
     
     wimp_initialise(wimp_VERSION_RO3, "Lode Runner", NULL, NULL);
 

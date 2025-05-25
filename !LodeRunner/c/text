@@ -200,7 +200,7 @@ void renderDebugText(int baseX, int baseY) {
 void renderGameStats(GameState *state, int baseX, int baseY) {
     int currentGameSize = getGameSize();
     int tileSize = 32 * currentGameSize;
-    int statsY = baseY - (HEIGHT * tileSize) + tileSize;
+    int statsY = baseY - (HEIGHT * tileSize) + ((CHAR_HEIGHT - 4) * currentGameSize);
     char statsText[MAX_DEBUG_LENGTH];
     sprintf(statsText, "level:%s  gold:%d/%d  size:%dx", currentLevelName,
             state->goldCollected, state->goldTotal, currentGameSize);

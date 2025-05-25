@@ -183,12 +183,12 @@ void updateWindow(wimp_w window) {
     wimp_draw draw;
     int more;
 
-    // Use dynamic tile size
     int tileSize = 32 * getGameSize();
+    int statsAreaHeight = 24 * getGameSize();
 
     draw.w = window;
     draw.box.x0 = 0;
-    draw.box.y0 = -HEIGHT * tileSize;
+    draw.box.y0 = -(HEIGHT * tileSize + statsAreaHeight);
     draw.box.x1 = WIDTH * tileSize; 
     draw.box.y1 = HEIGHT * tileSize;
 

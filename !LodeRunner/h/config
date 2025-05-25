@@ -4,13 +4,24 @@
 #include <stdio.h>
 
 #define CONFIG_FILE_PATH "<LodeRunner$Dir>.config"
+#define SAVE_FILE_PATH "<LodeRunner$Dir>.save"
 #define DEFAULT_GAME_SIZE 2
+#define MAX_COMPLETED_LEVELS 200
 
 extern int currentGameSize;
+extern int completedLevels[MAX_COMPLETED_LEVELS];
+extern int lastMenuPage;
+extern int lastMenuSelection;
 
 int loadConfig(void);
 int saveConfig(void);
 void setGameSize(int newSize);
 int getGameSize(void);
+
+int loadSaveFile(void);
+int saveSaveFile(void);
+void markLevelCompleted(int levelNumber);
+int isLevelCompleted(int levelNumber);
+void initializeSaveData(void);
 
 #endif
