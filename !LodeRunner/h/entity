@@ -20,7 +20,7 @@ typedef enum {
 #define WIDTH 30
 #define HEIGHT 17
 #define TILE_SIZE (32 * GAME_SIZE)
-#define HOLE_REGENERATION_TIME 300
+#define HOLE_REGENERATION_TIME 700
 #define WALL_PADDING 0.0f
 
 typedef struct {

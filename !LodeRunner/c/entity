@@ -58,9 +58,6 @@ osspriteop_header* getEntitySprite(Entity *entity, GameState *state, int isPlaye
 }
 
 osspriteop_header* getPlayerSprite(Entity *player, GameState *state) {
-    if (player->inHole) {
-        return playerFallSprite2;
-    }
 
     if (player->isDigging) {
         return (state->frame % 4 < 2) ? playerDigSprite1 : playerDigSprite2;
@@ -137,7 +134,6 @@ void moveEntity(GameState *state, Entity *entity, Direction dir, int isPlayer) {
 }
 
 void movePlayer(GameState *state, Entity *player, Direction dir) {
-    if (player->inHole) return;
 
     if (player->isDigging) return;
 
@@ -222,7 +218,6 @@ void movePlayer(GameState *state, Entity *player, Direction dir) {
                 }
             }
             else if (isClimbable(tileX, tileY)) {
-
                 if (tileY < HEIGHT-1 && isWalkable(tileX, tileY+1, state)) {
                     player->targetX = (float)tileX;
                     player->targetY = (float)(tileY + 1);
@@ -237,14 +232,12 @@ void movePlayer(GameState *state, Entity *player, Direction dir) {
                 }
             }
             else if (tileY < HEIGHT-1 && isClimbable(tileX, tileY+1) && supports(tileX, tileY, state)) {
-
                 player->targetX = (float)tileX;
                 player->targetY = (float)(tileY + 1);
                 player->isMoving = 1;
                 player->moveDir = dir;
             }
             else if (isLadderTop(tileX, tileY)) {
-
                 if (tileY < HEIGHT-1 && isClimbable(tileX, tileY+1)) {
                     player->targetX = (float)tileX;
                     player->targetY = (float)(tileY + 1);
@@ -322,8 +315,7 @@ void applyPlayerGravity(GameState *state) {
         playerIsFalling = 0;
     }
 
-    if (!player->isMoving && !isInHole(player->tileX, player->tileY) && 
-        !supports(player->tileX, player->tileY, state) && 
+    if (!player->isMoving && !supports(player->tileX, player->tileY, state) && 
         !isOnTightrope(player->tileX, player->tileY) && 
         !isClimbable(player->tileX, player->tileY)) {
 
@@ -346,9 +338,7 @@ void dig(GameState *state, int dx) {
     int x = player->tileX + dx;
     int y = player->tileY + 1;
 
-    if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT && 
-        map[y][x] == '#') {
-        
+    if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT && map[y][x] == '#') {
         map[y][x] = '.';
         holeTimer[y][x] = os_read_monotonic_time();
         dug[y][x] = 1;
@@ -357,6 +347,7 @@ void dig(GameState *state, int dx) {
         player->digDirection = dx;
         player->digTimer = 20; 
     }
+
 }
 
 
@@ -389,6 +380,7 @@ void updateHoleTimers(GameState *state) {
     for (int y = 0; y < HEIGHT; y++) {
         for (int x = 0; x < WIDTH; x++) {
             if (map[y][x] == '.' && dug[y][x]) {
+
                 if (state->player.tileX == x && state->player.tileY == y) {
                     state->player.inHole = 1;
                 }
@@ -402,6 +394,11 @@ void updateHoleTimers(GameState *state) {
 
                 if (holeTimer[y][x] != 0 && 
                     (currentTime - holeTimer[y][x]) >= HOLE_REGENERATION_TIME) {
+
+                    if (state->player.inHole && state->player.tileX == x && state->player.tileY == y) {
+                        state->gameOver = 1;
+                        continue;
+                    }
 
                     if (state->player.inHole && state->player.tileX == x && state->player.tileY == y) {
                         int newX, newY;
@@ -455,7 +452,6 @@ void updateHoleTimers(GameState *state) {
         state->player.inHole = 0;
     }
 
-    // Update enemy hole states
     updateEnemyHoleTimers(state);
 }
 
