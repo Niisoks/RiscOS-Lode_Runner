@@ -114,13 +114,12 @@ osspriteop_area* loadSpriteFile(const char *filename) {
 wimp_window* createWindow(void) {
     wimp_window* window = (wimp_window*)malloc(sizeof(wimp_window));
 
-    // Use dynamic game size for window calculations
     int currentSize = getGameSize();
     int tileSize = 32 * currentSize;
     int gameAreaWidth = WIDTH * tileSize;
     int gameAreaHeight = HEIGHT * tileSize;
     
-    int statsAreaHeight = 24;
+    int statsAreaHeight = 24 * currentSize;
     
     window->visible.x0 = 0;
     window->visible.y0 = 0;

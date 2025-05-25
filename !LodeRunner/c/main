@@ -19,26 +19,41 @@ int loadMapFromFile(const char *filename) {
     char buffer[256];
     int y = 0;
 
-    while (y < HEIGHT && fgets(buffer, sizeof(buffer), file)) {
+    for (int mapY = 0; mapY < HEIGHT; mapY++) {
+        for (int mapX = 0; mapX < WIDTH; mapX++) {
+            map[mapY][mapX] = ' ';
+        }
+        map[mapY][WIDTH] = '\0';
+    }
+
+    for (int borderY = 0; borderY < HEIGHT; borderY++) {
+        map[borderY][0] = 'S';
+        map[borderY][WIDTH-1] = 'S';
+    }
+
+    while (y < 15 && fgets(buffer, sizeof(buffer), file)) {
         char *newline = strchr(buffer, '\n');
         if (newline) *newline = '\0';
         newline = strchr(buffer, '\r');
         if (newline) *newline = '\0';
 
         int len = strlen(buffer);
-        int x;
-
-        for (x = 0; x < WIDTH && x < len; x++) {
-            map[y][x] = buffer[x];
+        
+        for (int x = 0; x < 20 && x < len; x++) {
+            map[y][x+1] = buffer[x];
         }
 
         y++;
     }
 
-    fclose(file);
+    for (int x = 0; x < WIDTH; x++) {
+        map[y][x] = 'S';
+    }
 
+    fclose(file);
     return 1;
 }
+
 
 GameState gameState;
 os_t timer = 0;
@@ -349,26 +364,45 @@ void loadLevelFromPath(const char *levelPath) {
 
     if (!mapLoaded) {
         const char* defaultMap[] = {
-            "####################",
-            "#P  G    H   G     #",
-            "#  H###H###H#####  #",
-            "#  H#  H  #H       #",
-            "#  H# #H# #H  ######",
-            "#  H# #H# #H    G  #",
-            "# #H# #H# #####H#  #",
-            "#  H   H#---G  H   #",
-            "#  H   H     HE#####",
-            "#  H   H-----H#    #",
-            "#  H --H           #",
-            "#  H   H    ##H    #",
-            "#  H   H      H    #",
-            "GGGGGGGGGGGGGGGGGGGG"
+            "P  G    H   G       ",
+            "  H###H###H#####    ",
+            "  H#  H  #H         ",
+            "  H# #H# #H  ###### ",
+            "  H# #H# #H    G    ",
+            " #H# #H# #####H#    ",
+            "  H   H#---G  H     ",
+            "  H   H     HE##### ",
+            "  H   H-----H#      ",
+            "  H --H             ",
+            "  H   H    ##H      ",
+            "  H   H      H      ",
+            "  H   H      H      ",
+            "  H   H      H      ",
+            "GGGGGGGGGGGGGGGGGGGG"   
         };
 
-        for (int y = 0; y < HEIGHT && y < 14; y++) {
-            strncpy(map[y], defaultMap[y], WIDTH);
+        for (int y = 0; y < HEIGHT; y++) {
+            for (int x = 0; x < WIDTH; x++) {
+                map[y][x] = ' ';
+            }
             map[y][WIDTH] = '\0';
         }
+
+        for (int x = 0; x < WIDTH; x++) {
+            map[HEIGHT-1][x] = 'S'; 
+        }
+        for (int y = 0; y < HEIGHT; y++) {
+            map[y][0] = 'S';        
+            map[y][WIDTH-1] = 'S';  
+        }
+
+        for (int y = 0; y < 15; y++) {
+            int len = strlen(defaultMap[y]);
+            for (int x = 0; x < 20 && x < len; x++) {
+                map[y+1][x+1] = defaultMap[y][x]; 
+            }
+        }
+
         strcpy(currentLevelName, "default");
     }
 

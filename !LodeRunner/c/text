@@ -168,7 +168,7 @@ void renderTextCenteredMultiLine(const char *text, int baseX, int y) {
     
     int currentY = y;
     int currentGameSize = getGameSize();
-    int lineHeight = CHAR_HEIGHT * currentGameSize + 4;
+    int lineHeight = CHAR_HEIGHT * currentGameSize + (4 * currentGameSize);
     
     char textCopy[256];
     strncpy(textCopy, text, sizeof(textCopy) - 1);

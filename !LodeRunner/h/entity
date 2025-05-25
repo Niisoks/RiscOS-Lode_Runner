@@ -17,8 +17,8 @@ typedef enum {
 } Direction;
 
 #define GAME_SIZE getGameSize()
-#define WIDTH 20
-#define HEIGHT 15
+#define WIDTH 22
+#define HEIGHT 16
 #define TILE_SIZE (32 * GAME_SIZE)
 #define HOLE_REGENERATION_TIME 300
 #define WALL_PADDING 0.0f
