@@ -138,7 +138,7 @@ void moveEntity(GameState *state, Entity *entity, Direction dir, int isPlayer) {
 
 void movePlayer(GameState *state, Entity *player, Direction dir) {
     if (player->inHole) return;
-    
+
     if (player->isDigging) return;
 
     if (playerIsFalling && (dir == LEFT || dir == RIGHT) && !isOnTightrope(player->tileX, player->tileY)) {
@@ -221,10 +221,31 @@ void movePlayer(GameState *state, Entity *player, Direction dir) {
                     player->moveDir = dir;
                 }
             }
-            else if (isClimbable(tileX, tileY) || 
-                (tileY < HEIGHT-1 && isClimbable(tileX, tileY+1) && supports(tileX, tileY, state))) {
-                if (tileY < HEIGHT-1 && 
-                    (isClimbable(tileX, tileY+1) || isLadderTop(tileX, tileY))) {
+            else if (isClimbable(tileX, tileY)) {
+
+                if (tileY < HEIGHT-1 && isWalkable(tileX, tileY+1, state)) {
+                    player->targetX = (float)tileX;
+                    player->targetY = (float)(tileY + 1);
+                    player->isMoving = 1;
+                    player->moveDir = dir;
+                }
+                else if (tileY < HEIGHT-1 && isSolid(tileX, tileY+1)) {
+                    player->targetX = (float)tileX;
+                    player->targetY = (float)tileY + WALL_PADDING;
+                    player->isMoving = 1;
+                    player->moveDir = dir;
+                }
+            }
+            else if (tileY < HEIGHT-1 && isClimbable(tileX, tileY+1) && supports(tileX, tileY, state)) {
+
+                player->targetX = (float)tileX;
+                player->targetY = (float)(tileY + 1);
+                player->isMoving = 1;
+                player->moveDir = dir;
+            }
+            else if (isLadderTop(tileX, tileY)) {
+
+                if (tileY < HEIGHT-1 && isClimbable(tileX, tileY+1)) {
                     player->targetX = (float)tileX;
                     player->targetY = (float)(tileY + 1);
                     player->isMoving = 1;

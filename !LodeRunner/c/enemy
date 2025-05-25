@@ -194,15 +194,27 @@ void moveEnemy(GameState *state, Entity *enemy, Direction dir) {
                 return;
             }
         }
+        else if (isClimbable(tileX, tileY)) {
 
-        else if (!isClimbable(tileX, tileY) &&
-                 !(isClimbable(tileX, nextY) &&
-                   supports(tileX, tileY, state))) {
-            return;
+            if (!isWalkable(tileX, nextY, state)) {
+                return;
+            }
         }
 
-        else if (!isClimbable(tileX, nextY) && !isLadderTop(tileX, tileY)) {
-            return;
+        else if (isClimbable(tileX, nextY) && supports(tileX, tileY, state)) {
+
+            if (!isWalkable(tileX, nextY, state)) {
+                return;
+            }
+        }
+
+        else if (isLadderTop(tileX, tileY)) {
+            if (!isClimbable(tileX, nextY) && !isWalkable(tileX, nextY, state)) {
+                return;
+            }
+        }
+        else {
+            return; 
         }
     }
 
