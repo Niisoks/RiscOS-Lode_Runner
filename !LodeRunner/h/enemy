@@ -9,6 +9,10 @@ extern Direction lastEnemyDirections[5];
 extern int enemyStuckCounters[5];         
 extern int preventBacktracking;           
 
+extern os_t enemyHoleStartTime[5];  
+extern int enemyEscapedFromHole[5]; 
+extern int enemyEscapeImmunity[5];  
+
 void initialiseEnemyAnimStates(void);
 void updateEnemyAnimationFrames(GameState *state);
 osspriteop_header* getEnemySprite(Entity *enemy, GameState *state, int entityIndex);
@@ -26,4 +30,9 @@ void updateEnemyAI(GameState *state);
 int checkEnemyCollisions(GameState *state);
 void updateEnemyHoleTimers(GameState *state);
 
-#endif 
+void updateEnemyHoleEscape(GameState *state);
+void initialiseEnemyHoleData(void);
+
+static int isEnemyAt(GameState *state, int x, int y, int excludeIndex);
+
+#endif

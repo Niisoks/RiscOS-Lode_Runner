@@ -167,6 +167,7 @@ void initialiseGame(GameState *state) {
     }
 
     initialiseAnimStates();
+    initialiseEnemyHoleData();
 
     state->goldCollected = 0;
     countGold(state);
@@ -299,6 +300,7 @@ void updateGame(void *ws) {
     }
     updateEnemyAI(state);  
     updateHoleTimers(state);
+    updateEnemyHoleEscape(state); // ADD THIS LINE
     checkForGold(state);
 
     if (checkCollision(state)) {  
@@ -311,14 +313,6 @@ void updateGame(void *ws) {
         setTimer(120, (void(*)(void*))showMenu, NULL);
         return;
     }
-
-    // Show message when all gold collected but haven't reached exit yet
-    // if (state->goldCollected >= state->goldTotal && !isAtWinPosition(state)) {
-    //     static int messageShown = 0;
-    //     if (!messageShown) {
-    //         messageShown = 1;
-    //     }
-    // }
 
     updateWindow(gameWindow);
 
