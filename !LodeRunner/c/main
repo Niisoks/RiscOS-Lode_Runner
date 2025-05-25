@@ -211,15 +211,15 @@ void processKeyPress(int keyCode, GameState *state) {
             break;
         case 'z':
         case 'Z':
-            dig(state, -1);
+            dig(state, -1, 0);
             break;
         case 'x':
         case 'X':
-            dig(state, 1);
+            dig(state, 1, 1);
             break;
         case 'q':
         case 'Q':
-            setTimer(120, (void(*)(void*))showMenu, NULL);  
+            setTimer(10, (void(*)(void*))showMenu, NULL);  
             return;
     }
 }
@@ -314,7 +314,7 @@ void updateGame(void *ws) {
             markLevelCompleted(levelNumber);
         }
         setCenteredMessage("level complete!\nreturning to menu...");
-        setTimer(120, (void(*)(void*))showMenu, NULL);
+        setTimer(10, (void(*)(void*))showMenu, NULL);
         return;
     }
 
