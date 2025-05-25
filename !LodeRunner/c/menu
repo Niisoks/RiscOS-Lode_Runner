@@ -232,6 +232,7 @@ void processMenuInput(int keyCode) {
 void showMenu(void) {
     menuState.isActive = 1;
     loadLevelList();
+    updateWindow(gameWindow);
 }
 
 void hideMenu(void) {
