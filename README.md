@@ -2,6 +2,17 @@
 
 A recreation of the classic Lode Runner game, built in C for RISC OS. 
 
+## Installing the game
+On RiscOS, download the latest release,ddc from the [releases page](https://github.com/Niisoks/RiscOS-Lode_Runner/releases)
+
+Please unzip from within riscos using infozip or other zip programs.
+
+The type should be zip.
+
+I advise extracting first but thats up to you.
+
+You can add up to 50 extra levels on top of the base 150, by adding levelX where X is a number between 150-200 and adding them to your maps dir. You can use maps already in this directory to help you design your maps.
+
 ## Features
 
 - **Playable Area:** A 28x16 grid with both destructible and indestructible terrain.
