@@ -596,7 +596,7 @@ int isAtWinPosition(GameState *state) {
     
     if (state->goldCollected >= state->goldTotal && 
         player->tileY == 0 && 
-        map[player->tileY][player->tileX] == 'W') {
+        (map[player->tileY][player->tileX] == 'W' || map[player->tileY][player->tileX] == 'H')) {
         return 1;
     }
     return 0;

@@ -60,7 +60,8 @@ void render(wimp_draw *draw, osbool more) {
                         }
                     } else{
                         switch (map[y][x]) {
-                            case '#': sprite = wallSprite; break;
+                            case '#':
+                            case 'X': sprite = wallSprite; break;
                             case 'H': sprite = ladderSprite; break;
                             case 'G': sprite = goldSprite; break;
                             case '.': sprite = holeSprite; break;
@@ -186,7 +187,7 @@ int isWalkable(int x, int y, GameState *state) {
         }
     }
 
-    return (tile == ' ' || tile == 'G' || tile == 'H' || tile == '.' || tile == '-' || tile == 'W');
+    return (tile == ' ' || tile == 'G' || tile == 'H' || tile == '.' || tile == '-' || tile == 'W' || tile == 'X');
 }
 
 int isOnTightrope(int x, int y) {
@@ -214,7 +215,7 @@ int isSolid(int x, int y) {
 }
 
 int isLadderTop(int x, int y) {
-    return y + 1 < HEIGHT && map[y + 1][x] == 'H' && map[y][x] != 'H' && map[y][x] != '#';
+    return y + 1 < HEIGHT && (map[y + 1][x] == 'H' || map[y + 1][x] == 'W') && map[y][x] != 'H' && map[y][x] != '#';
 }
 
 int supports(int x, int y, GameState *state) {

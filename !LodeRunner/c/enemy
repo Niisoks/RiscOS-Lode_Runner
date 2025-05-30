@@ -378,6 +378,12 @@ Direction findBestDirection(GameState *state, Entity *enemy, int enemyIndex) {
     int playerX = state->player.tileX;
     int playerY = state->player.tileY;
 
+    if (isClimbable(enemyX, enemyY) && playerY > enemyY && 
+        enemyY < HEIGHT - 1 && isWalkable(enemyX, enemyY + 1, state) &&
+        !isEnemyAt(state, enemyX, enemyY + 1, enemyIndex)) {
+        return DOWN;
+    }
+    
     if (playerY > enemyY && !isOnTightrope(enemyX, enemyY) &&
         !isClimbable(enemyX, enemyY)) {
         Direction dropDir =
